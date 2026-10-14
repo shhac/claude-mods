@@ -1,0 +1,14 @@
+{
+  "name": "shhac-claude-mods",
+  "description": "Mods for Claude Code: interface and behaviour changes built on function hooks",
+  "owner": {
+    "name": "Paul Somers"
+  },
+  "plugins": [
+    {
+      "name": "pets",
+      "source": "./plugins/pets",
+      "description": "A Codex-compatible pet above the prompt that reacts to what Claude is doing"
+    }
+  ]
+}
