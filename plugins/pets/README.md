@@ -4,6 +4,14 @@ A pet that lives above the Claude Code prompt and reacts to what Claude is doing
 
 Pets use the **Codex pet format**, so the pets you already have in Codex show up here unchanged, and a pet made for one works in both.
 
+## Install
+
+```
+/plugin install pets --marketplace shhac/claude-mods
+```
+
+See the [repo README](../../README.md) for scopes, updating and removing.
+
 ## What it shows
 
 | Claude is… | The pet plays | Label |
