@@ -55,3 +55,16 @@ From Codex's `hatch-pet` skill:
 - An atlas is 8×9 cells of 192×208, one animation per row.
 - Idle loops continuously; its first frame is the still pet for reduced motion.
 - `running-left` / `running-right` play while the pet is dragged.
+
+## What other mods found
+
+From other pet and companion mods, a third-party field guide, and issues on anthropics/claude-code, as of October 2026:
+
+- **Everyone else keeps the pet in the band.** [pixipet](https://github.com/VibeMage/claude-mod-pet) and [cabrera-evil/claude-pet](https://github.com/cabrera-evil/claude-pet) both draw in `AbovePrompt`. Nobody else we found floats over the conversation.
+- **Half-block `Raster` instead of `Image`.** Both draw the pet as true-colour `▀` cells (2 pixels per cell) and blit a whole frame in one `Raster`. That works in any true-colour terminal, not only kitty-protocol ones. It could be our fallback when `Image` can't draw.
+- **Blits:** `$.ui.blit` repaints one keyed element without a redraw, up to 120/s accepted and about 60/s shown. A blit resolves only once the frame paints. A Raster blit must keep the mounted size.
+- **Redraws are rate-limited:** `$.ui.invalidate` allows about 10/s.
+- **Paint order follows tree order,** which matches what we saw ([#99424](https://github.com/anthropics/claude-code/issues/99424)). An absolute box placed after the in-flow content paints on top of it.
+- **Compose with the rest:** a site hook that returns its own tree without `next(e)`'s result hides the host's content and other mods' content (zycck/claude-mods#15). Wrap `await next(e)` in a column with your own tree.
+- **Timers don't survive a hot reload,** so resume them from a render hook as well as `session.start`. Stop them on `session.end`.
+- cabrera-evil/claude-pet steps down to a smaller size when the band is too short, and gives each running subagent a mini pet.
