@@ -37,15 +37,20 @@ export function noteBottomSlot(rows: number, columns: number, bandMaxRows: numbe
   screen.conversationRows = Math.max(1, rows - promptRows)
 }
 
-// The row whose top is scrolled away starts above the viewport, so its row
-// `first` is the viewport's top row. Without one the conversation fits, and the
-// earliest row drawn is taken to start the viewport.
-export function hostRow(): { requestId: string; first: number } | undefined {
-  const entries = [...visible.entries()]
-  const cut = entries.find(([, seen]) => seen.first > 0)
-  const [requestId, seen] = cut ?? entries[0] ?? []
+// The pet rides the bottom-most row on screen: a floating box paints over the
+// rows before it but under every row after, so only the last row leaves it
+// whole. A row cut off at the bottom is the last; with none cut, the newest
+// row drawn is. Either way its row `last` is the conversation's bottom row.
+// The row that drew the pet last, so a new host can have the old one redrawn
+// without it.
+export const hosting: { requestId: string | undefined } = { requestId: undefined }
 
-  return requestId === undefined || seen === undefined ? undefined : { requestId, first: seen.first }
+export function hostRow(): { requestId: string; last: number } | undefined {
+  const entries = [...visible.entries()]
+  const cut = entries.find(([, seen]) => seen.last < seen.of - 1)
+  const [requestId, seen] = cut ?? entries.at(-1) ?? []
+
+  return requestId === undefined || seen === undefined ? undefined : { requestId, last: seen.last }
 }
 
 export const clampOffset = (wanted: Offset, size: Size): Offset => ({
@@ -54,6 +59,6 @@ export const clampOffset = (wanted: Offset, size: Size): Offset => ({
 })
 
 // Where the pet's top row falls in the host row's own rows, for a pet `lift`
-// rows up from the bottom of the conversation.
-export const topInHost = (host: { first: number }, at: Offset, size: Size) =>
-  host.first + screen.conversationRows - at.lift - size.rows
+// rows up from the bottom of the conversation; above the host's top it
+// reaches over the rows before it.
+export const topInHost = (host: { last: number }, at: Offset, size: Size) => host.last - at.lift - size.rows + 1

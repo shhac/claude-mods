@@ -4,7 +4,7 @@ import type { Elements, EngineInterface, Register } from 'claude-code'
 import type { Activity, Offset } from '../types'
 import { ACTIVITY_LABEL, REACTION_LABEL, columnsForRows } from './atlas'
 import { IMAGE_KEY, animate, currentFrame, playback, react, setActivity, steer } from './player'
-import { clampOffset, hostRow, noteBottomSlot, noteRow, topInHost } from './stage'
+import { clampOffset, hostRow, hosting, noteBottomSlot, noteRow, topInHost } from './stage'
 import type { GripProps } from './grip'
 import { codexSelection, findPets, homesFor, prepareFrames } from './pets'
 import type { PetHomes, PetPackage } from './pets'
@@ -222,18 +222,34 @@ export const register: Register = (on, options) => {
     return figure($.ui.resolve(e), view, size, e.props.bodyColumns)
   })
 
-  // Floating, the pet rides whichever conversation row starts the viewport: a
-  // floating box is cut off at its site's region, and a row's region is the
-  // whole conversation, so from there it can go anywhere over it.
+  // Floating, the pet rides the bottom-most conversation row: a floating box is
+  // cut off at its site's region, and a row's region is the whole conversation,
+  // so from there it can go anywhere over it.
   on(
     'ui.render',
-    { component: ['UserMessage', 'AssistantMessage', 'ToolUse', 'ToolResult'] },
+    {
+      component: [
+        'UserMessage',
+        'AssistantMessage',
+        'ToolUse',
+        'ToolResult',
+        'ToolGroup',
+        'CommandOutput',
+        'TurnDuration',
+        'InfoNotice',
+      ],
+    },
     async ($, e, next) => {
       if (!isFloating || e.surface !== 'terminal') return next(e)
 
       noteRow(e.requestId, e.props.onScreen)
       const host = hostRow()
       if (host?.requestId !== e.requestId) return next(e)
+
+      if (hosting.requestId !== e.requestId) {
+        hosting.requestId = e.requestId
+        $.ui.invalidate('ui.render')
+      }
 
       const view = await petView($)
       if (view === undefined) return next(e)

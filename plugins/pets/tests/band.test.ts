@@ -208,4 +208,17 @@ describe('the pet band', () => {
     expect(home.text).toBe('Pet is back in its corner.')
     expect((await floating())?.props).toMatchObject({ right: 0, top: 34 })
   })
+
+  test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+
+    const older = await $.ui.mount({ ...conversationRow('row-1', 0), props: { text: 'a', isFirstOfReply: true, onScreen: { first: 0, last: 9, of: 10 } } })
+    expect(await older.find({ type: 'Image', key: 'pet' })).toBeDefined()
+
+    const newer = await $.ui.mount({ ...conversationRow('row-2', 0), props: { text: 'b', isFirstOfReply: true, onScreen: { first: 0, last: 5, of: 6 } } })
+    expect(await newer.find({ type: 'Image', key: 'pet' })).toBeDefined()
+    expect(await older.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+  })
 })
