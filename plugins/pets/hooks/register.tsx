@@ -4,7 +4,7 @@ import type { Elements, EngineInterface, Register } from 'claude-code'
 import type { Activity, Offset } from '../types'
 import { ACTIVITY_LABEL, REACTION_LABEL, columnsForRows } from './atlas'
 import { IMAGE_KEY, animate, currentFrame, playback, react, setActivity, steer } from './player'
-import { clampOffset, hostRow, hosting, noteBottomSlot, noteRow, topInHost } from './stage'
+import { clampOffset, forgetRows, hostRow, hosting, noteBottomSlot, noteRow, topInHost } from './stage'
 import type { GripProps } from './grip'
 import { codexSelection, findPets, homesFor, prepareFrames } from './pets'
 import type { PetHomes, PetPackage } from './pets'
@@ -135,6 +135,13 @@ export const register: Register = (on, options) => {
     if (failure === undefined) await react($, 'greeting')
     animate($)
 
+    return next(e)
+  })
+
+  // A /clear or a resume drops the old conversation's rows unreported; left
+  // noted, one of them would keep the pet.
+  on('session.end', async ($, e, next) => {
+    forgetRows()
     return next(e)
   })
 

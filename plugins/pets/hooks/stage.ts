@@ -53,6 +53,12 @@ export function hostRow(): { requestId: string; last: number } | undefined {
   return requestId === undefined || seen === undefined ? undefined : { requestId, last: seen.last }
 }
 
+// A /clear or a resume drops the rows without reporting them off screen.
+export function forgetRows() {
+  visible.clear()
+  hosting.requestId = undefined
+}
+
 export const clampOffset = (wanted: Offset, size: Size): Offset => ({
   right: Math.round(Math.min(Math.max(wanted.right, 0), Math.max(0, screen.columns - size.columns))),
   lift: Math.round(Math.min(Math.max(wanted.lift, 0), Math.max(0, screen.conversationRows - size.rows))),
