@@ -97,8 +97,9 @@ describe('the pet band', () => {
     expect(await ui.find({ type: 'Text', text: 'Nullbyte' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: 'Hello!' })).toBeDefined()
 
-    const row = (await ui.findAll({ type: 'Box' }))[0]
-    expect(row?.props).toMatchObject({ width: 80, justifyContent: 'flex-end' })
+    const row = (await ui.findAll({ type: 'Box' })).find(box => box.props.justifyContent === 'flex-end')
+    expect(row?.props).toMatchObject({ width: 80 })
+    expect(await ui.find({ type: 'Text', text: 'engine band' })).toBeDefined()
 
     const image = await ui.find({ type: 'Image', key: 'pet' })
     // Row 3 (waving) is cells 24-27.
@@ -177,6 +178,7 @@ describe('the pet band', () => {
 
     const footer = await $.ui.mount(FOOTER)
     expect(await footer.find({ type: 'Text', text: /Nullbyte/, in: 'grip' })).toBeDefined()
+    expect(await footer.find({ type: 'Text', text: 'engine band' })).toBeDefined()
     expect(await footer.find({ type: 'Image' })).toBeUndefined()
 
     const host = await $.ui.mount(conversationRow('row-1', 5))

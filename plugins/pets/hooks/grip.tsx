@@ -4,7 +4,6 @@ import type { Offset } from '../types'
 
 export type GripProps = {
   offset: Offset
-  modes: string
   name: string
   status: string
 }
@@ -60,7 +59,6 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
   return (
     <Box paddingRight={props.offset.right}>
       <Text dimColor>
-        {props.modes === '' ? '' : `${props.modes} · `}
         <Text color="claude" weight="bold">
           {props.name}
         </Text>{' '}

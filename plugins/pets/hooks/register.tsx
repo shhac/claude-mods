@@ -207,9 +207,18 @@ export const register: Register = (on, options) => {
     if (e.viewport !== undefined) noteBottomSlot(e.viewport.rows, e.viewport.columns, e.props.maxRows)
     if (e.props.hasSurvey) return next(e)
 
-    const { Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
     const failure = await read($, problem)
-    if (failure !== null) return <Text dimColor>pets: {failure}</Text>
+
+    // The band is shared with the host and other mods, so ours goes below theirs.
+    if (failure !== null) {
+      return (
+        <Box flexDirection="column">
+          {await next(e)}
+          <Text dimColor>pets: {failure}</Text>
+        </Box>
+      )
+    }
 
     if (isFloating) return next(e)
 
@@ -219,7 +228,12 @@ export const register: Register = (on, options) => {
     playback.siteRequestId = e.requestId
     playback.framesDir = view.framesDir
 
-    return figure($.ui.resolve(e), view, size, e.props.bodyColumns)
+    return (
+      <Box flexDirection="column">
+        {await next(e)}
+        {figure($.ui.resolve(e), view, size, e.props.bodyColumns)}
+      </Box>
+    )
   })
 
   // Floating, the pet rides the bottom-most conversation row: a floating box is
@@ -287,15 +301,20 @@ export const register: Register = (on, options) => {
     const view = await petView($)
     if (view === undefined) return next(e)
 
-    const { Client } = $.ui.resolve(e)
+    const { Box, Client } = $.ui.resolve(e)
     const grip: GripProps = {
       offset: clampOffset(await read($, offset), size),
-      modes: e.props.modes.join(' & '),
       name: view.displayName,
       status: view.tool === null ? view.label : `${view.label} · ${view.tool}`,
     }
 
-    return <Client key="grip" module="./grip.tsx" props={grip} />
+    // The engine's modes, and any other mod's, keep their place left of the caption.
+    return (
+      <Box flexDirection="row" gap={1}>
+        {await next(e)}
+        <Client key="grip" module="./grip.tsx" props={grip} />
+      </Box>
+    )
   })
 
   // The caption posts where the pet should be while it is dragged, then on drop.
