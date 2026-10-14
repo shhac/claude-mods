@@ -9,6 +9,9 @@ What we measured building this mod against Claude Code 2.1.299 in fullscreen (cm
 - Plugin names can't start with `claude-`, and `claude-mods` itself is reserved.
 - `$.clock.after` returns a `Timer`; stop it with `.cancel()`.
 - A test mounts drawings and raises events, but nothing sits beneath the plugin. The test answers every event and `$` call itself. `$`-call events (`fs.*`, `process.run`, `command.register`, `ui.blit`) answer `{ value }`; engine events answer their result directly.
+- In a test, nothing more is drawn after `$.session.end`, so test what a `/clear` changes below the hooks.
+- `classic.*` hooks (we use `classic.Notification` for "Needs input") don't run in a plugin a person installs where an organization manages Claude Code, as `claude plugin validate` warns.
+- A `/clear` raises `session.end` with `reason: 'clear'` and no `session.start` after it, and conversation rows disappear without reporting `onScreen: null`.
 - `/home/...` counts as a network location on macOS (autofs), so the `Image` file check refuses it. Use `/Users/...` in fixtures.
 
 ## Where a mod can draw
