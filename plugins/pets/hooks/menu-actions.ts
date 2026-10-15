@@ -6,6 +6,7 @@ import { act, feedButton, fetchButton, patButton, trickButtons } from './actions
 import type { ActionButton } from './actions'
 import type { Care } from './care'
 import { PLACES, SIZE_NAMES, mirror } from './controls'
+import type { ShownMenu } from './drawings'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
 import { achievementLines, headerLine, statsLines } from './pages'
@@ -35,6 +36,10 @@ export function resetMenu() {
   menuMirror.rows = []
   menuMirror.timer = undefined
 }
+
+// The menu as a drawing shows it, while it's up or going.
+export const shownMenu = (): ShownMenu | undefined =>
+  menuMirror.state === 'closed' ? undefined : { rows: menuMirror.rows, isFading: menuMirror.state === 'fading' }
 
 function setMenu($: EngineInterface, state: MenuState) {
   menuMirror.state = state

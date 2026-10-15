@@ -6,14 +6,15 @@ import { settleIn } from './adoption'
 import { afterTest, afterTool, afterTurn } from './care'
 import { isTestRun } from './checks'
 import { petCommand } from './commands'
-import { SIDEBAR, aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
+import { SIDEBAR, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
-import type { Look, RowShare, ShownMenu } from './drawings'
+import type { Look, RowShare } from './drawings'
 import type { GripProps } from './grip'
 import { fieldOf } from './fields'
+import { PROMPT_DOCK_TOP, forgetHover, onGrip, onHandle, onMenu } from './gestures'
 import { tend } from './keeper'
-import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
+import { closeMenu, resetMenu, shownMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
 import { pressSidebar, sidebarView } from './side-panel'
@@ -25,9 +26,6 @@ import { petLook, statusLine } from './status'
 import { awaitThought, feelTool, hushStale, noteRequest, remark, say, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
-// Docked, the pet's top is on the prompt box's top edge, three rows above the
-// footer caption: the footer's floating boxes reach only over the bottom area.
-const PROMPT_DOCK_TOP = -3
 
 // The validator reads state refs per file, so each file declares the atoms it uses.
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
@@ -43,24 +41,10 @@ const ASKING_NOTIFICATIONS = new Set(['permission_prompt', 'elicitation_dialog']
 const activityForTool = (tool: string): Activity => (READ_ONLY_TOOLS.has(tool) ? 'reviewing' : 'running')
 const asChatter = (value: unknown): Chatter => (value === 'quiet' || value === 'off' ? value : 'on')
 
-const numberField = (data: unknown, key: string) => {
-  const value = fieldOf(data, key)
-  return typeof value === 'number' ? value : 0
-}
-
 async function cheerTests($: EngineInterface, hasPassed: boolean) {
   await tend($, care => afterTest(care, hasPassed))
   if (hasPassed) await react($, 'celebrating')
   await say($, hasPassed ? 'tests green! 💚' : 'ouch, red… 🩹')
-}
-
-const shownMenu = (): ShownMenu | undefined =>
-  menuMirror.state === 'closed' ? undefined : { rows: menuMirror.rows, isFading: menuMirror.state === 'fading' }
-
-// A right click on the pet or its name tag opens its menu; the rest are clicks.
-async function clickOrMenu($: EngineInterface, button: unknown, isOnPet: boolean) {
-  if (button === 'right') return toggleMenu($)
-  return click($, button, isOnPet)
 }
 
 // How the person set the pet to be drawn: floating, or in the band.
@@ -361,51 +345,19 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // The pet's catcher, over the conversation or docked: a drag moves it, a
-  // click pets it, a double click docks it on the prompt or back, a right
-  // click changes its size.
+  // What the pet's surfaces post: its catcher, its name tag, its menu.
   on('ui.message', { element: 'handle' }, async ($, e) => {
-    const kind = fieldOf(e.data, 'kind')
-    if (kind === 'hover') await hover($, `${e.requestId}:handle`, fieldOf(e.data, 'isOver') === true)
-    if (kind === 'click') await clickOrMenu($, fieldOf(e.data, 'button'), true)
-    if (kind !== 'drag' && kind !== 'drop') return {}
-
-    // Docked, the catcher is the footer's: the pet follows the pointer, as
-    // from the caption, counted from the footer row.
-    if (e.requestId === mirror.footerId) {
-      const columns = sizeOf(mirror.size).columns
-      const aim = {
-        fromRight: 1 + (columns - 1 - numberField(e.data, 'x')),
-        up: -(PROMPT_DOCK_TOP + numberField(e.data, 'y')),
-      }
-      await aimPet($, e.requestId, aim, kind === 'drop')
-      return {}
-    }
-
-    const gesture = `${e.requestId}:${e.element}:${numberField(e.data, 'gesture')}`
-    const move = { dx: numberField(e.data, 'dx'), dy: numberField(e.data, 'dy') }
-    await dragPet($, e.requestId, gesture, move, kind === 'drop')
+    await onHandle($, e.requestId, e.element, e.data)
     return {}
   })
 
-  // The right-click menu: a pick, or the pointer coming and going.
-  on('ui.message', { element: 'menu' }, async ($, e) => {
-    const kind = fieldOf(e.data, 'kind')
-    if (kind === 'hover') menuHover($, fieldOf(e.data, 'isOver') === true)
-    const id = fieldOf(e.data, 'id')
-    if (kind === 'pick' && typeof id === 'string') await pickFromMenu($, id)
-    return {}
-  })
-
-  // The footer caption: the same, but dragged, the pet follows the pointer.
   on('ui.message', { element: 'grip' }, async ($, e) => {
-    const kind = fieldOf(e.data, 'kind')
-    if (kind === 'hover') await hover($, `${e.requestId}:grip`, fieldOf(e.data, 'isOver') === true)
-    if (kind === 'click') await clickOrMenu($, fieldOf(e.data, 'button'), false)
-    if (kind !== 'aim' && kind !== 'drop') return {}
+    await onGrip($, e.requestId, e.data)
+    return {}
+  })
 
-    const aim = { fromRight: numberField(e.data, 'fromRight'), up: numberField(e.data, 'up') }
-    await aimPet($, e.requestId, aim, kind === 'drop')
+  on('ui.message', { element: 'menu' }, async ($, e) => {
+    await onMenu($, e.data)
     return {}
   })
 }
