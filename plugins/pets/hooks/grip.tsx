@@ -9,7 +9,7 @@ export type GripProps = {
   status: string
 }
 
-type Press = { x: number; y: number; button: 'left' | 'middle' | 'right'; hasMoved: boolean }
+type Press = { x: number; y: number; hasMoved: boolean }
 
 // Mutable per instance: the module function runs again on every redraw, while
 // the pointer listener set on the first run must read the latest values.
@@ -30,8 +30,15 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
     const live: Live = { columns: surface.columns, press: undefined, sent: '' }
 
     surface.onPointer(event => {
-      if (event.type === 'down' && event.button !== undefined) {
-        live.press = { x: event.x, y: event.y, button: event.button, hasMoved: false }
+      // As on the pet's catcher, any button but the left is a click at once.
+      if (event.type === 'down' && event.button !== undefined && event.button !== 'left') {
+        live.press = undefined
+        surface.post({ kind: 'click', button: event.button })
+        return
+      }
+
+      if (event.type === 'down' && event.button === 'left') {
+        live.press = { x: event.x, y: event.y, hasMoved: false }
         return
       }
 
@@ -40,13 +47,13 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
 
       if (event.type === 'up') {
         live.press = undefined
-        surface.post(press.hasMoved ? { kind: 'drop', ...aimOf(event, live) } : { kind: 'click', button: press.button })
+        surface.post(press.hasMoved ? { kind: 'drop', ...aimOf(event, live) } : { kind: 'click', button: 'left' })
         return
       }
 
       // Only a drag moves the pet: a click on the caption leaves it be.
       const isAway = event.x !== press.x || event.y !== press.y
-      press.hasMoved = press.hasMoved || (press.button === 'left' && isAway)
+      press.hasMoved = press.hasMoved || isAway
       const aim = aimOf(event, live)
       const sent = `${aim.fromRight}:${aim.up}`
       if (!press.hasMoved || sent === live.sent) return

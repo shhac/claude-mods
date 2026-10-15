@@ -258,7 +258,8 @@ describe('the pet band', () => {
     await click('left')
     expect((await $.command.run(pet('stats'))).text).toContain('petted 1×')
 
-    await click('right')
+    // A right press is a click at once; its release may never come.
+    await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
     expect((await host.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
 
     await clock.advance(2000)

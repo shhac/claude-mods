@@ -2,7 +2,7 @@ import type { ClientModule } from 'claude-code'
 
 export type HandleProps = { columns: number; rows: number }
 
-type Press = { x: number; y: number; button: 'left' | 'middle' | 'right'; hasMoved: boolean }
+type Press = { x: number; y: number; hasMoved: boolean }
 
 // Mutable per instance: the module function runs again on every redraw, while
 // the pointer listener set on the first run must read the latest values.
@@ -19,8 +19,16 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
     const live: Live = { press: undefined, gesture: 0, sent: '' }
 
     surface.onPointer(event => {
-      if (event.type === 'down' && event.button !== undefined) {
-        live.press = { x: event.x, y: event.y, button: event.button, hasMoved: false }
+      // Only a left press drags, so any other button is a click straight
+      // away: over the conversation, a right button's release can go astray.
+      if (event.type === 'down' && event.button !== undefined && event.button !== 'left') {
+        live.press = undefined
+        surface.post({ kind: 'click', button: event.button })
+        return
+      }
+
+      if (event.type === 'down' && event.button === 'left') {
+        live.press = { x: event.x, y: event.y, hasMoved: false }
         live.gesture += 1
         return
       }
@@ -30,14 +38,14 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
 
       const dx = event.x - press.x
       const dy = event.y - press.y
-      if (dx !== 0 || dy !== 0) press.hasMoved = press.hasMoved || press.button === 'left'
+      if (dx !== 0 || dy !== 0) press.hasMoved = true
 
       if (event.type === 'up') {
         live.press = undefined
         surface.post(
           press.hasMoved
             ? { kind: 'drop', gesture: live.gesture, dx, dy }
-            : { kind: 'click', button: press.button },
+            : { kind: 'click', button: 'left' },
         )
         return
       }
