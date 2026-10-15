@@ -11,6 +11,7 @@ import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
 import type { ShownMenu } from './drawings'
 import type { GripProps } from './grip'
+import { fieldOf } from './fields'
 import { tend } from './keeper'
 import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
@@ -42,12 +43,6 @@ const ASKING_NOTIFICATIONS = new Set(['permission_prompt', 'elicitation_dialog']
 
 const activityForTool = (tool: string): Activity => (READ_ONLY_TOOLS.has(tool) ? 'reviewing' : 'running')
 const asChatter = (value: unknown): Chatter => (value === 'quiet' || value === 'off' ? value : 'on')
-
-const fieldOf = (data: unknown, key: string) => {
-  if (typeof data !== 'object' || data === null || !(key in data)) return undefined
-  const record: Record<string, unknown> = { ...data }
-  return record[key]
-}
 
 const numberField = (data: unknown, key: string) => {
   const value = fieldOf(data, key)

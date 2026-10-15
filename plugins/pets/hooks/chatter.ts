@@ -1,3 +1,5 @@
+import { fieldOf } from './fields'
+
 // What the pet says or thinks in its bubble: not what Claude is doing, which
 // the conversation already shows, but how the pet feels about it.
 
@@ -23,9 +25,7 @@ export function wrapBubble(text: string, columns = BUBBLE_TEXT_COLUMNS): string[
 }
 
 const field = (input: unknown, key: string) => {
-  if (typeof input !== 'object' || input === null || !(key in input)) return undefined
-  const record: Record<string, unknown> = { ...input }
-  const value = record[key]
+  const value = fieldOf(input, key)
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
 }
 
