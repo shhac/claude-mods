@@ -54,8 +54,6 @@ declare module 'claude-code' {
       isHidden: boolean
       problem: string | null
       offset: Offset
-      size: SizeName
-      dock: Dock
       // The bubble, while it shows.
       bubble: Bubble | null
       sections: Sections

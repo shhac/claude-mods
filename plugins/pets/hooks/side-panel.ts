@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { Sections } from '../types'
 import { columnsForRows } from './atlas'
+import { mirror } from './controls'
 import { keeper } from './keeper'
 import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
 import { achievementCount } from './achievements'
@@ -15,8 +16,6 @@ import { petLook, statusLine } from './status'
 const sections = atom({ plugin: 'pets', key: 'sections' } as const, { achievements: false, config: false, actions: true })
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
-const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
-const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 
 const SECTION_IDS = new Set<string>(['achievements', 'config', 'actions'])
 const isSection = (value: string): value is keyof Sections => SECTION_IDS.has(value)
@@ -50,8 +49,8 @@ export async function sidebarView($: EngineInterface, bodyRows: number, bodyColu
     sections: await read($, sections),
     actions: [patButton(care), feedButton(care, now), fetchButton(care)],
     tricks: trickButtons(),
-    place: await read($, dock),
-    size: await read($, size),
+    place: mirror.dock,
+    size: mirror.size,
     said: await read($, bubble),
     bodyRows,
     isInline,

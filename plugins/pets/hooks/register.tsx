@@ -31,8 +31,6 @@ const PROMPT_DOCK_TOP = -3
 // The validator reads state refs per file, so each file declares the atoms it uses.
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 const offset = atom({ plugin: 'pets', key: 'offset' } as const, { right: 0, lift: 0 })
-const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
-const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
@@ -193,7 +191,7 @@ export const register: Register = (on, options) => {
     playback.framesDir = look.framesDir
 
     const caption = { badge: await read($, badge), status: await statusLine($), said: await read($, bubble) }
-    const petSize = sizeOf(await read($, size))
+    const petSize = sizeOf(mirror.size)
 
     return (
       <Box flexDirection="column">
@@ -256,9 +254,8 @@ export const register: Register = (on, options) => {
 
       const row = await next(e)
 
-      // The host row follows the pet's every change.
+      // The host row follows the pet as it moves.
       await read($, offset)
-      await read($, size)
       playback.siteRequestId = e.requestId
       playback.framesDir = look.framesDir
 
@@ -281,8 +278,8 @@ export const register: Register = (on, options) => {
     const look = await petLook($)
     if (look === undefined) return next(e)
 
-    const isDocked = (await read($, dock)) === 'prompt'
-    const petSize = sizeOf(await read($, size))
+    const isDocked = mirror.dock === 'prompt'
+    const petSize = sizeOf(mirror.size)
     const at = await read($, offset)
     const said = await read($, bubble)
     const isSaying = isDocked && said !== null && !said.isFading

@@ -16,7 +16,6 @@ const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const activity = atom({ plugin: 'pets', key: 'activity' } as const, 'ready')
 const reaction = atom({ plugin: 'pets', key: 'reaction' } as const, null)
 const detail = atom({ plugin: 'pets', key: 'detail' } as const, null)
-const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 // What the pet does, shown while the pointer is over it or its name tag.
@@ -44,7 +43,7 @@ async function restingLabel($: EngineInterface) {
 
 export async function statusLine($: EngineInterface) {
   if (mirror.isDebug) return `${mirror.hostKind} · ${describeStage()}`
-  if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[await read($, dock)]
+  if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[mirror.dock]
 
   const shownReaction = await read($, reaction)
   if (shownReaction !== null) return REACTION_LABEL[shownReaction]

@@ -20,8 +20,6 @@ const DOUBLE_CLICK_MS = 450
 const DRAG_TIMEOUT_MS = 1500
 
 const offset = atom({ plugin: 'pets', key: 'offset' } as const, HOME_OFFSET)
-const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
-const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 // The sizes and places there are, in the order every list shows them.
@@ -123,7 +121,6 @@ export async function restoreControls($: EngineInterface, defaultSize: SizeName)
 
   const savedSize = await $.store.get('size')
   mirror.size = isSizeName(savedSize) ? savedSize : defaultSize
-  await update($, size, () => mirror.size)
 
   mirror.isDebug = (await $.store.get('debug')) === true
 
@@ -132,7 +129,6 @@ export async function restoreControls($: EngineInterface, defaultSize: SizeName)
   const savedDock = await $.store.get('dock')
   const wanted = isDock(savedDock) ? savedDock : 'conversation'
   mirror.dock = wanted === 'sidebar' && !(await openSidebar($)) ? 'conversation' : wanted
-  await update($, dock, () => mirror.dock)
 }
 
 // Says whether the sidebar is drawn. One that isn't would wait and turn up
@@ -151,10 +147,12 @@ export async function setOffset($: EngineInterface, next: Offset) {
   if (was.right !== next.right || was.lift !== next.lift) await update($, offset, () => next)
 }
 
+// Size and place change seldom, so every drawing redraws for them: the
+// mirror is all there is of them, kept for next time in the store.
 export async function setSize($: EngineInterface, next: SizeName) {
   mirror.size = next
-  await update($, size, () => next)
   await $.store.set('size', next)
+  $.ui.invalidate('ui.render')
 }
 
 // Says whether the pet went there: the sidebar needs room.
@@ -173,7 +171,6 @@ export async function setDock($: EngineInterface, next: Dock) {
 // Where the pet is now, kept for next time; the sidebar already open or shut.
 export async function settleDock($: EngineInterface, next: Dock) {
   mirror.dock = next
-  await update($, dock, () => next)
   await $.store.set('dock', next)
   $.ui.invalidate('ui.render')
 }
