@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { afterTool, afterTurn, badgeOf, careFrom, fed, levelOf, milestone, newCare, welcomeBack } from '../hooks/care'
+import { award, describeAchievements } from '../hooks/achievements'
+import { afterTest, afterTool, afterTurn, badgeOf, careFrom, fed, isHungry, isSleepy, isTired, levelOf, meter, milestone, newCare, played, welcomeBack } from '../hooks/care'
 import { feelingAboutTool, fitBubble, toolLine, wrapBubble } from '../hooks/chatter'
 
 const HOUR = 60 * 60 * 1000
@@ -49,6 +50,57 @@ describe('looking after the pet', () => {
   test('a garbled store starts fresh, field by field', () => {
     expect(careFrom({ xp: 12, mood: 'happy', streak: 3 }, NOW)).toMatchObject({ xp: 12, mood: 70, streak: 3, adoptedAt: NOW })
     expect(careFrom('nope', NOW)).toEqual(newCare(NOW))
+  })
+})
+
+describe('hunger, energy, play and achievements', () => {
+  test('away, the pet gets hungrier and rests; never below the floors', () => {
+    const left = { ...newCare(NOW - 30 * HOUR), fullness: 60, energy: 20, lastSeenAt: NOW - 3 * HOUR }
+    expect(welcomeBack(left, NOW)).toMatchObject({ fullness: 36, energy: 95 })
+    expect(welcomeBack({ ...left, lastSeenAt: NOW - 50 * HOUR }, NOW)).toMatchObject({ fullness: 20, energy: 100 })
+  })
+
+  test('work tires it a little, a treat fills it up, play tires it more', () => {
+    const worked = afterTool(newCare(NOW), false)
+    expect(worked).toMatchObject({ energy: 79.5, fullness: 79.8 })
+
+    const hungry = { ...newCare(NOW), fullness: 30, energy: 12 }
+    expect(isHungry(hungry)).toBe(true)
+    expect(isTired(hungry)).toBe(true)
+    const meal = fed(hungry, NOW)
+    expect('care' in meal && meal.care).toMatchObject({ fullness: 70, energy: 22 })
+
+    expect(played(newCare(NOW), NOW)).toMatchObject({ fetches: 1, energy: 72, mood: 74, xp: 2 })
+  })
+
+  test('it gets sleepy when tired or late at night', () => {
+    expect(isSleepy({ ...newCare(NOW), energy: 20 }, NOW)).toBe(true)
+    const lateNight = new Date(2026, 9, 15, 2).getTime()
+    expect(isSleepy(newCare(lateNight), lateNight)).toBe(true)
+    expect(isSleepy(newCare(NOW), new Date(2026, 9, 15, 14).getTime())).toBe(false)
+  })
+
+  test('passing test runs build a streak; a failure ends it', () => {
+    const green = [true, true, true].reduce((care, passed) => afterTest(care, passed), newCare(NOW))
+    expect(green).toMatchObject({ testsPassed: 3, greenStreak: 3, bestGreenStreak: 3, xp: 9 })
+    expect(afterTest(green, false)).toMatchObject({ greenStreak: 0, bestGreenStreak: 3 })
+  })
+
+  test('achievements are given once, as they are earned', () => {
+    const first = award(afterTurn(newCare(NOW), NOW), NOW)
+    expect(first.earned.map(one => one.id)).toEqual(['first-reply'])
+    expect(award(afterTurn(first.care, NOW), NOW).earned).toEqual([])
+    expect(describeAchievements(first.care)).toBe('🏆 1/13: Hello, world')
+  })
+
+  test('older stores fill in the new fields', () => {
+    expect(careFrom({ xp: 50, achievements: { 'first-reply': 1, bogus: 'x' } }, NOW)).toMatchObject({
+      fullness: 80,
+      energy: 80,
+      fetches: 0,
+      achievements: { 'first-reply': 1 },
+    })
+    expect(meter(73)).toBe('▰▰▰▰▰▰▰▱▱▱')
   })
 })
 

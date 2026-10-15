@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import { describeAchievements } from './achievements'
 import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
 import { describeCare, fed, petted } from './care'
 import { NEXT_SIZE, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
@@ -109,7 +110,7 @@ export async function petCommand($: EngineInterface, args: string) {
   if (isCare && (current === null || keeper.care === undefined)) return 'No pet here yet.'
 
   if (arg === 'stats' && current !== null && keeper.care !== undefined) {
-    return describeCare(current.displayName, keeper.care, await $.clock.now())
+    return `${describeCare(current.displayName, keeper.care, await $.clock.now())}\n${describeAchievements(keeper.care)}`
   }
 
   if (arg === 'feed' && current !== null) return feedPet($, current.displayName)

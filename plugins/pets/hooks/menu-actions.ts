@@ -2,6 +2,7 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, Timer } from 'claude-code'
 
 import type { MenuState } from '../types'
+import { describeAchievements } from './achievements'
 import { describeCare, fed } from './care'
 import { feedPet, hidePet, patPet } from './commands'
 import { isSizeName, mirror, setDock, setSize } from './controls'
@@ -108,5 +109,8 @@ export async function pickFromMenu($: EngineInterface, id: string) {
   if (current === null) return
   if (id === 'pat') return patPet($)
   if (id === 'feed') return feedPet($, current.displayName)
-  if (id === 'stats' && keeper.care !== undefined) $.ui.toast(describeCare(current.displayName, keeper.care, await $.clock.now()))
+  if (id === 'stats' && keeper.care !== undefined) {
+    const stats = describeCare(current.displayName, keeper.care, await $.clock.now())
+    $.ui.toast(`${stats}\n${describeAchievements(keeper.care)}`, { timeoutMs: 10000 })
+  }
 }
