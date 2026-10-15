@@ -61,9 +61,13 @@ In fullscreen the pet floats over the conversation, starting at its bottom-right
 
 The name tag in the footer (bottom right) works too: drag it and the pet follows the pointer, double click to dock it, right click to resize. If grabbing the pet ever misses, the tag always works.
 
+The pet can go right down to the bottom of the conversation, over the notices Claude Code prints there (a reload, a recap, a drafted bug report). No hook sees those rows, so there the pet can only be grabbed by its name tag, and a notice's text draws over it.
+
 ## Chatter
 
-A speech bubble beside the pet says what Claude is up to (`reading stage.ts`, `searching for TODO`). Shell commands without a description get a one-line summary from Haiku, and when a reply lands the pet makes a short, cute, slightly snarky remark about it, also from Haiku. Set `chatter` to `quiet` to keep the tool lines without any model calls, or `off` for no bubble.
+The pet says how it feels about what's going on: not what Claude is doing, which the conversation already shows. Haiku speaks for it, told who the pet is (its name, its Codex description, its mood and level), what you asked, what Claude has done since and what the pet said already. It has a feeling about a tool call at most every 12 seconds, asks the model at most every 20, and fills in between with lines of its own. While Claude goes quiet to think, the pet muses in a thought bubble. When a reply lands it makes a cute, slightly snarky remark about it.
+
+Set `chatter` to `quiet` for the pet's own lines with no model calls, or `off` for no bubble.
 
 ## Looking after it
 

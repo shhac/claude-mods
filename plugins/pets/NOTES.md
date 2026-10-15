@@ -32,7 +32,7 @@ Nothing sits beside the prompt box, which always spans the full width.
 
 - A floating box is cut off at the edge of its site's region. The probes showed:
   - **Band:** its own region; nothing above or below it shows. To the right, it reaches into the `[-]` margin.
-  - **Footer (`SessionMode`):** the bottom area: the separator lines, the prompt input and the footer rows, at least 5 rows up from the footer label. 12 rows up is cut off.
+  - **Footer (`SessionMode`):** the bottom area: the separator lines, the prompt input and the footer rows, at least 5 rows up from the footer label. 12 rows up is cut off, and a pet docked 6 to 10 rows up vanished in a live session, so the prompt dock hangs from the prompt box's top edge, 3 rows up.
   - **Conversation row:** the whole conversation area.
 - **A site that draws nothing in the flow isn't laid out at all,** so a floating box hung off it never shows. Give the site some visible content in place.
 - **Images aren't dropped at the edge.** A 5- or 6-row `Image` crossing the footer region's rows still drew.
@@ -45,6 +45,8 @@ Nothing sits beside the prompt box, which always spans the full width.
 - **The pointer over a floating box lands on its parent.** A `Client` inside a floating box never gets mouse events, so the pet itself can't be grabbed.
 - A `Client` drawn in the flow does get events (`down`, `move`, `up`, with sub-cell `fine` positions on Ghostty). After a `down` it keeps every `move` until the `up`, even off its own cells, and no text gets selected. The pet's name tag in the footer is the drag handle for this reason.
 - Ghostty reports moves within a cell, so only send an update when the cell changes, or each one costs a full redraw.
+- A right click on the footer caption arrived as a click, but one on the pet's catcher over the conversation didn't. The catchers now treat any press but the left as a click at once, without waiting for its release.
+- The test harness's `find` matches on tag, key and text only, not on style props like `italic`.
 
 ## Conversation rows as a host
 
