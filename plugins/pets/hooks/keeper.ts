@@ -40,8 +40,10 @@ export async function loadCare($: EngineInterface, petId: string) {
 
 // Applies a change to the pet's care as saved, not as this session last saw
 // it, so other sessions' changes add up with this one's; a new level, a
-// milestone or an achievement is celebrated by the session that made it.
-export async function tend($: EngineInterface, change: (care: Care, now: number) => Care) {
+// milestone or an achievement is celebrated by the session that made it. A
+// change that finds nothing to do returns undefined: nothing is saved, though
+// the care read is shown.
+export async function tend($: EngineInterface, change: (care: Care, now: number) => Care | undefined) {
   const { petId, care: held } = keeper
   if (petId === undefined || held === undefined) return undefined
 
@@ -49,7 +51,13 @@ export async function tend($: EngineInterface, change: (care: Care, now: number)
   const saved = await $.store.get(storeKey(petId))
   // With nothing saved (the store cleared), this session's care is all there is.
   const care = saved === undefined ? held : careFrom(saved, now)
-  const { care: next, earned } = award(change(care, now), now)
+  const changed = change(care, now)
+  if (changed === undefined) {
+    await show($, care)
+    return undefined
+  }
+
+  const { care: next, earned } = award(changed, now)
   await $.store.set(storeKey(petId), next)
   await show($, next)
 

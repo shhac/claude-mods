@@ -55,8 +55,7 @@ describe('two sessions, one pet', () => {
 
     const now = clock.now()
     otherSession(saved, care => ({ ...care, treats: 3, lastFedAt: now }))
-    await $.command.run(pet('feed'))
-
+    expect((await $.command.run(pet('feed'))).text).toBe('Nullbyte is still full. Try again in 30 min.')
     expect((await $.command.run(pet('stats'))).text).toContain('3 treats')
   })
 

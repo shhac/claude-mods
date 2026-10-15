@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import { fed, isHungry, petted } from './care'
 import type { Care } from './care'
 import { isDock, isSizeName, setDock, setSize } from './controls'
-import { keeper, tend } from './keeper'
+import { tend } from './keeper'
 import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
 import { react } from './player'
 import { say } from './voice'
@@ -40,17 +40,18 @@ export const trickButtons = (): readonly ActionButton[] =>
 
 // Resolves what to say back, for /pet.
 export async function feedPet($: EngineInterface, name: string) {
-  const care = keeper.care
-  if (care === undefined) return 'No pet to feed.'
+  // Decided on the care as saved, so a meal another session just gave stands.
+  const refusal: { waitMinutes?: number } = {}
+  const next = await tend($, (saved, now) => {
+    const meal = fed(saved, now)
+    if ('care' in meal) return meal.care
 
-  const meal = fed(care, await $.clock.now())
-  if ('waitMinutes' in meal) return `${name} is still full. Try again in ${meal.waitMinutes} min.`
-
-  // Fed from the care as saved; a meal another session gave meanwhile stands.
-  await tend($, (saved, now) => {
-    const again = fed(saved, now)
-    return 'care' in again ? again.care : saved
+    refusal.waitMinutes = meal.waitMinutes
+    return undefined
   })
+  if (refusal.waitMinutes !== undefined) return `${name} is still full. Try again in ${refusal.waitMinutes} min.`
+  if (next === undefined) return 'No pet to feed.'
+
   await react($, 'happy')
   await say($, 'nom nom nom 🍪')
   return `${name} loved that.`
