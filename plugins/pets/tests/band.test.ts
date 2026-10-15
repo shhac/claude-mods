@@ -163,4 +163,56 @@ describe('the pet band: placement, commands and chatter', () => {
     await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'Done.', durationMs: 10, isAborted: false })
     expect(asked).toEqual([])
   })
+
+  test('with chatter on, a failed model call falls back to the pet’s own line', BAND_PLACEMENT, async ($, on) => {
+    codexHome(on)
+    on('model.complete', () => ({ deny: 'offline' }))
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+
+    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/a.ts' })
+    expect(await ui.find({ type: 'Text', text: /what’s in there|read that one|nosing around|so many files/ })).toBeDefined()
+  })
+
+  test('the model is asked at most every 20 s; in between the pet uses its own lines', BAND_PLACEMENT, async ($, on) => {
+    const { clock } = codexHome(on)
+    const asked: string[] = []
+    on('model.complete', ($, e) => {
+      asked.push(e.prompt)
+      const usage = { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+      return { value: { isAnswered: true, text: 'ooh, from the model', usage } }
+    })
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+
+    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/a.ts' })
+    expect(asked).toHaveLength(1)
+
+    // Past the 12 s between feelings, short of the 20 s between model calls.
+    await clock.advance(13000)
+    await $.tool.call({ tool: 'Edit', tool_use_id: 'u2', file_path: '/work/a.ts', old_string: 'a', new_string: 'b' })
+    expect(asked).toHaveLength(1)
+    expect(await ui.find({ type: 'Text', text: /careful|liked it before|fresh code|tests/ })).toBeDefined()
+  })
+
+  test('a bubble goes after 8 s; a newer one keeps its own time', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {
+    const { clock } = codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+    const shows = async (text: RegExp) => (await ui.find({ type: 'Text', text })) !== undefined
+    const feeling = /what’s in there|read that one|nosing around|so many files/
+
+    await $.command.run(pet('feed'))
+    expect(await shows(/nom nom nom/)).toBe(true)
+
+    // A feeling 5 s in replaces it. The treat's timer, up at 8 s, leaves the
+    // feeling be; the feeling goes when its own 8 s are up.
+    await clock.advance(5000)
+    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/a.ts' })
+    expect(await shows(/nom nom nom/)).toBe(false)
+    await clock.advance(3500)
+    expect(await shows(feeling)).toBe(true)
+    await clock.advance(5000)
+    expect(await shows(feeling)).toBe(false)
+  })
 })

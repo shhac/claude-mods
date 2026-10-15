@@ -89,4 +89,30 @@ describe("the pet's menu, fetch and tricks", () => {
     await host.pointer({ type: 'down', x: 10, y: 4, button: 'left', in: 'menu' })
     expect((await $.command.run(pet('stats'))).text).toContain('0 tricks')
   })
+
+  test('docking the pet mid-fetch ends the game; docked, it fetches on the spot', async ($, on) => {
+    const { clock } = codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const footer = await $.ui.mount(FOOTER)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    // The name tag opens the menu wherever the pet is.
+    const fetchFromMenu = async () => {
+      await footer.pointer({ type: 'down', x: 0, y: 0, button: 'right', in: 'grip' })
+      await host.pointer({ type: 'down', x: 3, y: 3, button: 'left', in: 'menu' })
+    }
+
+    await fetchFromMenu()
+    await clock.advance(300)
+    await $.command.run(pet('dock prompt'))
+    await clock.advance(10000)
+    expect((await $.command.run(pet('stats'))).text).toContain('0 games of fetch')
+
+    // Docked, the menu opens from the bottom row; a minute on, it plays again,
+    // on the spot.
+    await clock.advance(60000)
+    await fetchFromMenu()
+    await clock.advance(5000)
+    expect((await $.command.run(pet('stats'))).text).toContain('1 games of fetch')
+  })
 })
