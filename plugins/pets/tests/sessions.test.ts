@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { BAND, BAND_PLACEMENT, codexHome, pet } from './harness'
+import { BAND, BAND_PLACEMENT, codexHome, pet, SIDEBAR_PANE } from './harness'
 
 // The test plays a second session looking after the same pet, writing its
 // care to the store this one reads.
@@ -58,5 +58,34 @@ describe('two sessions, one pet', () => {
     await $.command.run(pet('feed'))
 
     expect((await $.command.run(pet('stats'))).text).toContain('3 treats')
+  })
+
+  test('with nothing saved, a change builds on the care this session holds', async ($, on) => {
+    const saved = new Map<string, unknown>()
+    codexHome(on, saved)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+
+    await $.command.run(pet('pat'))
+    saved.delete(KEY)
+    await $.command.run(pet('pat'))
+
+    expect((await $.command.run(pet('stats'))).text).toContain('petted 2×')
+  })
+
+  test("the sidebar shows another session's pats, though no level or heart changed", { options: { chatter: 'off' } }, async ($, on) => {
+    const saved = new Map<string, unknown>()
+    const { clock } = codexHome(on, saved)
+    on('ui.open', () => ({ value: { isPlaced: true } }))
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.command.run(pet('dock sidebar'))
+    const side = await $.ui.mount(SIDEBAR_PANE)
+    expect(await side.find({ type: 'Text', text: /0 pats/ })).toBeDefined()
+    // The greeting over and the pet quiet, only the watcher's take-up redraws.
+    await clock.advance(30000)
+
+    otherSession(saved, care => ({ ...care, pets: 3 }))
+    await clock.advance(5000)
+
+    expect(await side.find({ type: 'Text', text: /3 pats/ })).toBeDefined()
   })
 })
