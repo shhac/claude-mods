@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { SizeName } from '../types'
 import { restoreControls } from './controls'
-import { keeper, loadCare } from './keeper'
+import { loadCare } from './keeper'
 import { codexSelection, findPets, homesFor, prepareFrames } from './pets'
 import type { PetHomes, PetPackage } from './pets'
 import { playback, react } from './player'
@@ -24,7 +24,7 @@ async function framesFor($: EngineInterface, homes: PetHomes, chosen: PetPackage
   }
 }
 
-// Resolves why the pet could not be loaded, or undefined once it is shown.
+// Resolves why the pet could not be loaded, or its care once it is shown.
 // Only the slicing can fail that way: anything after it is a bug, not a pet
 // that won't load.
 export async function adopt($: EngineInterface, homes: PetHomes, chosen: PetPackage) {
@@ -34,8 +34,7 @@ export async function adopt($: EngineInterface, homes: PetHomes, chosen: PetPack
   playback.framesDir = ready.framesDir
   await update($, pet, () => ready)
   meetPet(chosen.displayName, chosen.description)
-  await loadCare($, ready.id)
-  return undefined
+  return loadCare($, ready.id)
 }
 
 async function choosePet($: EngineInterface, homes: PetHomes, available: readonly PetPackage[]) {
@@ -86,11 +85,10 @@ export async function settleIn($: EngineInterface, defaultSize: SizeName) {
     return
   }
 
-  const failure = await adopt($, homes, chosen)
-  await update($, problem, () => failure ?? null)
-  if (failure !== undefined) return
+  const adopted = await adopt($, homes, chosen)
+  await update($, problem, () => (typeof adopted === 'string' ? adopted : null))
+  if (typeof adopted === 'string') return
 
   await react($, 'greeting')
-  const streak = keeper.care?.streak ?? 1
-  if (streak > 1) await say($, `Day ${streak} in a row! 🎉`)
+  if (adopted.streak > 1) await say($, `Day ${adopted.streak} in a row! 🎉`)
 }

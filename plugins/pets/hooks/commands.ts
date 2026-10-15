@@ -7,7 +7,7 @@ import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
 import { feedPet, hidePet, patPet } from './actions'
 import { describeCare } from './care'
 import { NEXT_SIZE, PLACES, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
-import { keeper } from './keeper'
+import { careNow } from './keeper'
 import { findPets, homesFor } from './pets'
 import { react } from './player'
 import { describeStage } from './stage'
@@ -31,8 +31,8 @@ async function switchPet($: EngineInterface, id: string) {
   const chosen = (await findPets($, homes)).find(one => one.id === id)
   if (chosen === undefined) return `No pet "${id}".\n\n${await describePets($, homes)}`
 
-  const failure = await adopt($, homes, chosen)
-  if (failure !== undefined) return `Could not load ${chosen.displayName}: ${failure}`
+  const adopted = await adopt($, homes, chosen)
+  if (typeof adopted === 'string') return `Could not load ${chosen.displayName}: ${adopted}`
   await update($, problem, () => null)
 
   await $.store.set('selected', chosen.id)
@@ -72,7 +72,7 @@ async function debugCommand($: EngineInterface) {
 // Stats, a treat or a pat, for the pet on screen.
 async function careCommand($: EngineInterface, arg: string) {
   const current = await read($, pet)
-  const care = keeper.care
+  const care = await careNow($)
   if (current === null || care === undefined) return 'No pet here yet.'
 
   if (arg === 'feed') return feedPet($, current.displayName)

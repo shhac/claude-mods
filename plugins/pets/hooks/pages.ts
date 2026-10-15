@@ -1,6 +1,6 @@
+import type { Care } from '../types'
 import { ACHIEVEMENTS, isEarned } from './achievements'
 import { daysTogether, heartsLine, levelProgress, meter } from './care'
-import type { Care } from './care'
 
 // What the pet's stats and achievements say, line by line: the menu's pages
 // and the sidebar's sections draw the same.

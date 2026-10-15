@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { careFrom } from '../hooks/care'
-import type { Care } from '../hooks/care'
+import type { Care } from '../types'
 import { BAND, BAND_PLACEMENT, codexHome, pet, SESSION, SIDEBAR_PANE } from './harness'
 
 // The test plays a second session looking after the same pet, writing its

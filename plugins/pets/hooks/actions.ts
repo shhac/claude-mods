@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { Care } from '../types'
 import { fed, isHungry, isTired, petted } from './care'
-import type { Care } from './care'
 import { isDock, isSizeName, setDock, setSize } from './controls'
 import { tend } from './keeper'
 import { TRICKS, doTrick, isUnlocked, playFetch } from './play'

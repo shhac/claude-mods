@@ -1,5 +1,5 @@
+import type { Care } from '../types'
 import { levelOf } from './care'
-import type { Care } from './care'
 
 // Things a pet earns once, each cheered as it comes and listed in its stats.
 

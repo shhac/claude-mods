@@ -2,34 +2,7 @@
 // work, likes being petted and fed, and misses you a bit while you're away,
 // though never so much it sulks.
 
-export type Care = {
-  xp: number
-  // 0 to 100.
-  mood: number
-  pets: number
-  treats: number
-  turns: number
-  tools: number
-  adoptedAt: number
-  lastSeenAt: number
-  lastFedAt: number
-  // Days in a row the pet has been visited.
-  streak: number
-  lastDay: string
-  // 0 to 100, both: a treat fills the pet up, work tires it, rest restores it.
-  fullness: number
-  energy: number
-  fetches: number
-  tricks: number
-  testsPassed: number
-  // Test runs passed in a row, and the best such run.
-  greenStreak: number
-  bestGreenStreak: number
-  // Replies watched between midnight and 5am.
-  nightTurns: number
-  // Each achievement earned, by id, with when.
-  achievements: Record<string, number>
-}
+import type { Care } from '../types'
 
 const MOOD_FLOOR = 30
 const MOOD_LOST_PER_HOUR = 2

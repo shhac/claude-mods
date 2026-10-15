@@ -6,7 +6,7 @@ import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
 import { isHungry, isSleepy } from './care'
 import { mirror } from './controls'
 import type { Look } from './drawings'
-import { keeper } from './keeper'
+import { careNow } from './keeper'
 import { describeStage } from './stage'
 
 // What the pet is, and what it's up to, as every place that shows it reads.
@@ -35,7 +35,7 @@ export async function petLook($: EngineInterface): Promise<Look | undefined> {
 
 // Between turns the pet says how it is: sleepy, hungry, or just ready.
 async function restingLabel($: EngineInterface) {
-  const care = keeper.care
+  const care = await careNow($)
   if (care === undefined) return ACTIVITY_LABEL.ready
   if (isSleepy(care, await $.clock.now())) return 'Sleepy 💤'
   return isHungry(care) ? 'Hungry' : ACTIVITY_LABEL.ready

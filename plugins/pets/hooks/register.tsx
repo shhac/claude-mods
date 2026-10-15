@@ -13,7 +13,7 @@ import type { Look, RowShare } from './drawings'
 import type { GripProps } from './grip'
 import { fieldOf } from './fields'
 import { PROMPT_DOCK_TOP, forgetHover, onGrip, onHandle, onMenu } from './gestures'
-import { stopWatchingCare, tend, watchCare } from './keeper'
+import { badgeNow, stopWatchingCare, tend, watchCare } from './keeper'
 import { closeMenu, resetMenu, shownMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
@@ -31,7 +31,6 @@ import type { Chatter } from './voice'
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 const offset = atom({ plugin: 'pets', key: 'offset' } as const, HOME_OFFSET)
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
-const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch'])
@@ -238,7 +237,7 @@ export const register: Register = (on, options) => {
 
     hostPicture(e.requestId, look.framesDir)
 
-    const caption = { badge: await read($, badge), status: await statusLine($), said: await read($, bubble) }
+    const caption = { badge: await badgeNow($), status: await statusLine($), said: await read($, bubble) }
     const petSize = sizeOf(mirror.size)
 
     return (
@@ -309,7 +308,7 @@ export const register: Register = (on, options) => {
     const grip: GripProps = {
       pad,
       name: look.displayName,
-      badge: await read($, badge),
+      badge: await badgeNow($),
       status: isSaying ? `“${said.text}”` : await statusLine($),
       statusColumns: mirror.isDebug ? 64 : 44,
     }

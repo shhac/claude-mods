@@ -35,6 +35,36 @@ export type BubbleKind = 'say' | 'think'
 // left where it was.
 export type Bubble = { text: string; kind: BubbleKind; isFading: boolean }
 
+// How the pet is doing, kept per pet in the store and shared by every session.
+export type Care = {
+  xp: number
+  // 0 to 100.
+  mood: number
+  pets: number
+  treats: number
+  turns: number
+  tools: number
+  adoptedAt: number
+  lastSeenAt: number
+  lastFedAt: number
+  // Days in a row the pet has been visited.
+  streak: number
+  lastDay: string
+  // 0 to 100, both: a treat fills the pet up, work tires it, rest restores it.
+  fullness: number
+  energy: number
+  fetches: number
+  tricks: number
+  testsPassed: number
+  // Test runs passed in a row, and the best such run.
+  greenStreak: number
+  bestGreenStreak: number
+  // Replies watched between midnight and 5am.
+  nightTurns: number
+  // Each achievement earned, by id, with when.
+  achievements: Record<string, number>
+}
+
 export type Pet = {
   id: string
   displayName: string
@@ -56,8 +86,8 @@ declare module 'claude-code' {
       sections: Sections
       // The pointer is over the pet or its name tag: both light up.
       isHovered: boolean
-      // Level and mood hearts, as the caption shows them.
-      badge: string
+      // The care of the pet on screen, as last saved by any session.
+      care: Care | null
     }
   }
 }

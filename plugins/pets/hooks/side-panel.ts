@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { Sections } from '../types'
 import { columnsForRows } from './atlas'
 import { mirror } from './controls'
-import { keeper } from './keeper'
+import { careNow } from './keeper'
 import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
 import { achievementCount } from './achievements'
 import { achievementLines, headerLine, statsLines } from './pages'
@@ -15,7 +15,6 @@ import { petLook, statusLine } from './status'
 
 const sections = atom({ plugin: 'pets', key: 'sections' } as const, { achievements: false, config: false, actions: true })
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
-const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 
 const SECTION_IDS = new Set<string>(['achievements', 'config', 'actions'])
 const isSection = (value: string): value is keyof Sections => SECTION_IDS.has(value)
@@ -32,9 +31,7 @@ export async function sidebarView($: EngineInterface, bodyRows: number, bodyColu
   const look = await petLook($)
   if (look === undefined) return undefined
 
-  // The badge changes with the pet's care, so reading it redraws the sidebar.
-  await read($, badge)
-  const care = keeper.care
+  const care = await careNow($)
   const now = await $.clock.now()
   const rows = isInline ? INLINE_ROWS : sidebarRows(bodyColumns)
 

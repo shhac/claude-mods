@@ -1,12 +1,12 @@
 import type { EngineInterface, Timer } from 'claude-code'
 
+import type { Care } from '../types'
 import { achievementCount } from './achievements'
 import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
 import type { ActionButton } from './actions'
-import type { Care } from './care'
 import { PLACES, SIZE_NAMES, mirror } from './controls'
 import type { ShownMenu } from './drawings'
-import { keeper } from './keeper'
+import { careNow } from './keeper'
 import type { MenuRow } from './menu-rows'
 import { achievementLines, headerLine, statsLines } from './pages'
 
@@ -85,7 +85,7 @@ function configRows(): readonly MenuRow[] {
 }
 
 async function rowsNow($: EngineInterface, page: MenuPage): Promise<readonly MenuRow[]> {
-  const care = keeper.care
+  const care = await careNow($)
   const now = await $.clock.now()
   if (page === 'config') return configRows()
   // Stats and achievements need a pet's care; without one they can't be picked.
