@@ -14,7 +14,7 @@ import type { GripProps } from './grip'
 import { tend } from './keeper'
 import { animate, playback, react, setActivity } from './player'
 import { forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
-import { awaitThought, feelTool, noteRequest, remark, stopMusing, voice } from './voice'
+import { awaitThought, feelTool, hushStale, noteRequest, remark, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
 // Docked, the pet's top is on the prompt box's top edge, three rows above the
@@ -91,6 +91,7 @@ export const register: Register = (on, options) => {
       argumentHint: '[list | <id> | on | off | home | size | dock | stats | feed | pat]',
     })
 
+    await hushStale($)
     await settleIn($, defaultSize)
     animate($)
 

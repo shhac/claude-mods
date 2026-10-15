@@ -1,7 +1,8 @@
 // What the pet says or thinks in its bubble: not what Claude is doing, which
 // the conversation already shows, but how the pet feels about it.
 
-const MAX_BUBBLE = 64
+// Three lines of the bubble.
+const MAX_BUBBLE = 84
 // The bubble's text wraps at this width, inside its border and padding.
 export const BUBBLE_TEXT_COLUMNS = 28
 

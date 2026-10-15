@@ -61,15 +61,20 @@ const TAIL: Record<BubbleKind, { toRight: string; toLeft: string }> = {
   think: { toRight: '∘°', toLeft: '°∘' },
 }
 
-export type BubbleShape = { lines: readonly string[]; columns: number; rows: number }
+export type BubbleShape = { lines: readonly string[]; columns: number; rows: number; tail: number }
 
 // The bubble's size on screen: its wrapped text in a rounded border with a
 // column of padding each side, and its tail.
 export function shapeOf(bubble: Bubble): BubbleShape {
   const lines = wrapBubble(bubble.text)
   const widest = Math.max(0, ...lines.map(line => line.length))
-  return { lines, columns: widest + 4 + TAIL[bubble.kind].toRight.length, rows: lines.length + 2 }
+  const tail = TAIL[bubble.kind].toRight.length
+  return { lines, columns: widest + 4 + tail, rows: lines.length + 2, tail }
 }
+
+// Spaces, not padding: padding leaves its cells unpainted, so whatever is
+// under the bubble shows through.
+const padLine = (line: string, shape: BubbleShape) => ` ${line.padEnd(shape.columns - shape.tail - 4)} `
 
 // `isPetRight` puts the tail on the right, toward a pet on that side.
 const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean) => {
@@ -94,10 +99,10 @@ const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean)
   return (
     <Box flexDirection="row">
       {isPetRight ? null : tail}
-      <Box flexDirection="column" borderStyle="round" borderColor="claude" borderDimColor={isThought} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor="claude" borderDimColor={isThought}>
         {shape.lines.map((line, row) => (
           <Text key={`line-${row}`} italic={isThought} dimColor={isThought}>
-            {line}
+            {padLine(line, shape)}
           </Text>
         ))}
       </Box>

@@ -69,7 +69,7 @@ describe('what the pet says', () => {
 
   test('bubbles are one short line, wrapped to fit the bubble', () => {
     expect(fitBubble('  "Nice   refactor,\nClaude"  ')).toBe('Nice refactor, Claude')
-    expect(fitBubble('x'.repeat(80))).toHaveLength(64)
+    expect(fitBubble('x'.repeat(100))).toHaveLength(84)
     expect(wrapBubble('the gears are turning, slowly but surely ⚙️', 20)).toEqual(['the gears are', 'turning, slowly but', 'surely ⚙️'])
     expect(wrapBubble('x'.repeat(30), 10)).toEqual(['xxxxxxxxx…'])
   })
