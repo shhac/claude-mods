@@ -25,6 +25,16 @@ describe('the pet band: placement, commands and chatter', () => {
     })
   })
 
+  test('back the next day, the pet cheers the streak', BAND_PLACEMENT, async ($, on) => {
+    const { clock, saved } = codexHome(on)
+    const yesterday = clock.now() - 20 * 60 * 60 * 1000
+    saved.set('care:nullbyte', { streak: 3, lastDay: '2026-10-14', lastSeenAt: yesterday, adoptedAt: yesterday })
+    await $.session.start(SESSION)
+
+    const ui = await $.ui.mount(BAND)
+    expect(await ui.find({ type: 'Text', text: /Day 4 in a row/ })).toBeDefined()
+  })
+
   test('follows the turn: running, then a tool, then done', BAND_PLACEMENT, async ($, on) => {
     const { clock } = codexHome(on)
     await $.session.start(SESSION)
