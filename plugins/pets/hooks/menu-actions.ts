@@ -2,13 +2,13 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, Timer } from 'claude-code'
 
 import type { MenuState } from '../types'
-import { describeAchievements } from './achievements'
-import { describeCare, fed, isHungry } from './care'
+import { fed, isHungry } from './care'
 import type { Care } from './care'
 import { feedPet, hidePet, patPet } from './commands'
-import { isSizeName, mirror, setDock, setSize } from './controls'
+import { isDock, isSizeName, mirror, setDock, setSize } from './controls'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
+import { achievementCount, achievementLines, headerLine, statsLines } from './pages'
 import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
 
 // The pet's right-click menu: what it offers, when it closes, and what a
@@ -24,8 +24,9 @@ const FADE_MS = 400
 
 // Kept out of the session's state: only the host row draws the menu, and a
 // row that read an atom would redraw on every change of it.
-export const menuMirror: { state: MenuState; rows: readonly MenuRow[]; timer: Timer | undefined } = {
+export const menuMirror: { state: MenuState; page: MenuPage; rows: readonly MenuRow[]; timer: Timer | undefined } = {
   state: 'closed',
+  page: 'actions',
   rows: [],
   timer: undefined,
 }
@@ -33,6 +34,7 @@ export const menuMirror: { state: MenuState; rows: readonly MenuRow[]; timer: Ti
 // A load starts closed: the timers of the last one are gone.
 export function resetMenu() {
   menuMirror.state = 'closed'
+  menuMirror.page = 'actions'
   menuMirror.rows = []
   menuMirror.timer = undefined
 }
@@ -48,16 +50,22 @@ function feedLabel(care: Care | undefined, now: number) {
   return care !== undefined && isHungry(care) ? 'Feed (hungry!)' : 'Feed'
 }
 
-async function rowsNow($: EngineInterface): Promise<readonly MenuRow[]> {
-  const care = keeper.care
-  const now = await $.clock.now()
+export type MenuPage = 'actions' | 'stats' | 'achievements' | 'config'
+const PAGES = new Set<string>(['actions', 'stats', 'achievements', 'config'])
+const isPage = (value: string): value is MenuPage => PAGES.has(value)
+
+const action = (id: string, label: string, isDisabled = false): MenuRow => ({ kind: 'action', id, label, isDisabled })
+const back = action('page:actions', '‹ Back')
+const text = (label: string): MenuRow => ({ kind: 'text', label, isDim: false })
+
+function actionRows(care: Care | undefined, now: number): readonly MenuRow[] {
   const meal = care === undefined ? undefined : fed(care, now)
   const isTooTired = isFetchTired()
 
   return [
-    { kind: 'action', id: 'pat', label: '♥ Pat', isDisabled: care === undefined },
-    { kind: 'action', id: 'feed', label: feedLabel(care, now), isDisabled: meal === undefined || 'waitMinutes' in meal },
-    { kind: 'action', id: 'fetch', label: isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', isDisabled: care === undefined || isTooTired },
+    action('pat', '♥ Pat', care === undefined),
+    action('feed', feedLabel(care, now), meal === undefined || 'waitMinutes' in meal),
+    action('fetch', isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', care === undefined || isTooTired),
     {
       kind: 'choices',
       label: 'Tricks',
@@ -68,25 +76,39 @@ async function rowsNow($: EngineInterface): Promise<readonly MenuRow[]> {
         isDisabled: !isUnlocked(trick),
       })),
     },
-    {
-      kind: 'choices',
-      label: 'Size',
-      choices: (['small', 'medium', 'large'] as const).map(name => ({
-        id: `size:${name}`,
-        label: name,
-        isCurrent: name === mirror.size,
-        isDisabled: false,
-      })),
-    },
-    {
-      kind: 'action',
-      id: 'dock',
-      label: mirror.dock === 'conversation' ? 'Sit on the prompt' : 'Back over the chat',
-      isDisabled: false,
-    },
-    { kind: 'action', id: 'stats', label: 'Stats', isDisabled: care === undefined },
-    { kind: 'action', id: 'hide', label: 'Hide', isDisabled: false },
+    action('page:stats', 'Stats ›', care === undefined),
+    action('page:achievements', care === undefined ? 'Achievements ›' : `Achievements ${achievementCount(care)} ›`, care === undefined),
+    action('page:config', 'Config ›'),
   ]
+}
+
+const choicesOf = <T extends string>(label: string, prefix: string, names: readonly T[], current: T, labels: Record<T, string>): MenuRow => ({
+  kind: 'choices',
+  label,
+  choices: names.map(name => ({ id: `${prefix}:${name}`, label: labels[name], isCurrent: name === current, isDisabled: false })),
+})
+
+function configRows(): readonly MenuRow[] {
+  return [
+    choicesOf('Place', 'place', ['conversation', 'prompt'] as const, mirror.dock === 'prompt' ? 'prompt' : 'conversation', {
+      conversation: 'chat',
+      prompt: 'prompt',
+    }),
+    choicesOf('Size ', 'size', ['small', 'medium', 'large'] as const, mirror.size, { small: 'small', medium: 'medium', large: 'large' }),
+    action('hide', 'Hide (/pet on brings it back)'),
+    back,
+  ]
+}
+
+async function rowsNow($: EngineInterface, page: MenuPage): Promise<readonly MenuRow[]> {
+  const care = keeper.care
+  const now = await $.clock.now()
+  if (page === 'config' || care === undefined) return page === 'actions' ? actionRows(care, now) : configRows()
+  if (page === 'stats') return [{ kind: 'text', label: headerLine(care), isDim: false }, ...statsLines(care, now).map(text), back]
+  if (page === 'achievements') {
+    return [...achievementLines(care).map(line => ({ kind: 'text' as const, label: line.label, isDim: !line.isEarned })), back]
+  }
+  return actionRows(care, now)
 }
 
 function closeIn($: EngineInterface, ms: number) {
@@ -94,8 +116,10 @@ function closeIn($: EngineInterface, ms: number) {
   menuMirror.timer = $.clock.after(ms, () => void closeMenu($))
 }
 
-export async function openMenu($: EngineInterface) {
-  menuMirror.rows = await rowsNow($)
+// It opens on the actions; the other pages are a pick away.
+export async function openMenu($: EngineInterface, page: MenuPage = 'actions') {
+  menuMirror.page = page
+  menuMirror.rows = await rowsNow($, page)
   setMenu($, 'open')
   closeIn($, IDLE_MS)
 }
@@ -123,22 +147,21 @@ export function menuHover($: EngineInterface, isOver: boolean) {
 }
 
 export async function pickFromMenu($: EngineInterface, id: string) {
-  await closeMenu($)
+  const page = id.startsWith('page:') ? id.slice('page:'.length) : undefined
+  if (page !== undefined && isPage(page)) return openMenu($, page)
 
+  await closeMenu($)
   if (id === 'fetch') return playFetch($)
   if (id.startsWith('trick:')) return doTrick($, id.slice('trick:'.length))
 
   const size = id.startsWith('size:') ? id.slice('size:'.length) : undefined
   if (isSizeName(size)) return setSize($, size)
-  if (id === 'dock') return setDock($, mirror.dock === 'conversation' ? 'prompt' : 'conversation')
+  const place = id.startsWith('place:') ? id.slice('place:'.length) : undefined
+  if (isDock(place)) return setDock($, place)
   if (id === 'hide') return hidePet($)
 
   const current = await read($, pet)
   if (current === null) return
   if (id === 'pat') return patPet($)
   if (id === 'feed') return feedPet($, current.displayName)
-  if (id === 'stats' && keeper.care !== undefined) {
-    const stats = describeCare(current.displayName, keeper.care, await $.clock.now())
-    $.ui.toast(`${stats}\n${describeAchievements(keeper.care)}`, { timeoutMs: 10000 })
-  }
 }

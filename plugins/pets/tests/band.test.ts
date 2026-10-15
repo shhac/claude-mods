@@ -298,10 +298,13 @@ describe('the pet band', () => {
 
     // A right press opens the menu at once; its release may never come.
     await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
-    expect(await host.find({ type: 'Text', text: /Sit on the prompt/, in: 'menu' })).toBeDefined()
+    expect(await host.find({ type: 'Text', text: /Config ›/, in: 'menu' })).toBeDefined()
 
-    // The size row, fifth: " Size small medium large", inside the border.
-    await host.pointer({ type: 'down', x: 20, y: 5, button: 'left', in: 'menu' })
+    // Config is the seventh row; on its page the size row is second:
+    // " Size  small medium large", inside the border.
+    await host.pointer({ type: 'down', x: 2, y: 7, button: 'left', in: 'menu' })
+    expect(await host.find({ type: 'Text', text: /‹ Back/, in: 'menu' })).toBeDefined()
+    await host.pointer({ type: 'down', x: 22, y: 2, button: 'left', in: 'menu' })
     expect((await host.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
     await clock.advance(1000)
     expect(await host.find({ key: 'menu' })).toBeUndefined()
@@ -398,8 +401,28 @@ describe('the pet band', () => {
     // Docked, a right click on the name tag opens it from the bottom row.
     await $.command.run(pet('dock'))
     await footer.pointer({ type: 'down', x: 0, y: 0, button: 'right', in: 'grip' })
-    expect(await host.find({ type: 'Text', text: /Back over the chat/, in: 'menu' })).toBeDefined()
+    expect(await host.find({ type: 'Text', text: /Fetch/, in: 'menu' })).toBeDefined()
     await clock.advance(20000)
+  })
+
+  test('the menu opens on actions, with pages for stats, achievements and config', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const shows = async (text: RegExp) => (await host.find({ type: 'Text', text, in: 'menu' })) !== undefined
+
+    await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
+    expect(await shows(/Achievements 0\/13 ›/)).toBe(true)
+
+    await host.pointer({ type: 'down', x: 2, y: 5, button: 'left', in: 'menu' })
+    expect(await shows(/energy/)).toBe(true)
+    expect(await shows(/♥ Pat/)).toBe(false)
+
+    // Back, then the achievements.
+    await host.pointer({ type: 'down', x: 2, y: 10, button: 'left', in: 'menu' })
+    await host.pointer({ type: 'down', x: 2, y: 6, button: 'left', in: 'menu' })
+    expect(await shows(/· Regular: visit 7 days in a row/)).toBe(true)
   })
 
   test('fetch: the pet runs to the far side and back, and is a little tired after', async ($, on) => {

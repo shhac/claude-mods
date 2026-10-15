@@ -10,6 +10,7 @@ function idAt(rows: readonly MenuRow[], x: number, y: number): string | undefine
   // The border takes the first row and column.
   const row = rows[y - 1]
   if (row === undefined || x < 1) return undefined
+  if (row.kind === 'text') return undefined
   if (row.kind === 'action') return row.isDisabled ? undefined : row.id
   const span = choiceSpans(row).find(one => x - 1 >= one.from && x - 1 < one.to)
   const choice = row.choices.find(one => one.id === span?.id)
@@ -56,8 +57,12 @@ const Menu: ClientModule<MenuProps, { live: Live }> = (props, surface) => {
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="claude">
-      {props.rows.map(row =>
-        row.kind === 'action' ? (
+      {props.rows.map((row, index) =>
+        row.kind === 'text' ? (
+          <Text key={`text-${index}`} dimColor={row.isDim}>
+            {` ${row.label.padEnd(inner - 2)} `}
+          </Text>
+        ) : row.kind === 'action' ? (
           <Text key={row.id} inverse={row.id === hovered} dimColor={row.isDisabled}>
             {` ${row.label.padEnd(inner - 2)} `}
           </Text>
