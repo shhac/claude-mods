@@ -15,18 +15,27 @@ const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
 const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 
-// Resolves why the pet could not be loaded, or undefined once it is shown.
-export async function adopt($: EngineInterface, homes: PetHomes, chosen: PetPackage) {
+// The pet's frames, sliced from its spritesheet, or why they couldn't be.
+async function framesFor($: EngineInterface, homes: PetHomes, chosen: PetPackage) {
   try {
-    const ready = await prepareFrames($, homes, chosen)
-    playback.framesDir = ready.framesDir
-    await update($, pet, () => ready)
-    meetPet(chosen.displayName, chosen.description)
-    await loadCare($, ready.id)
-    return undefined
+    return await prepareFrames($, homes, chosen)
   } catch (error) {
     return error instanceof Error ? error.message : String(error)
   }
+}
+
+// Resolves why the pet could not be loaded, or undefined once it is shown.
+// Only the slicing can fail that way: anything after it is a bug, not a pet
+// that won't load.
+export async function adopt($: EngineInterface, homes: PetHomes, chosen: PetPackage) {
+  const ready = await framesFor($, homes, chosen)
+  if (typeof ready === 'string') return ready
+
+  playback.framesDir = ready.framesDir
+  await update($, pet, () => ready)
+  meetPet(chosen.displayName, chosen.description)
+  await loadCare($, ready.id)
+  return undefined
 }
 
 async function choosePet($: EngineInterface, homes: PetHomes, available: readonly PetPackage[]) {
