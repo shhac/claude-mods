@@ -86,6 +86,7 @@ The pet levels up as it watches you work (replies and tool calls earn xp), likes
 - `/pet stats`: level, mood, streak and what it has watched
 - `/pet feed`: a treat, at most every half hour
 - `/pet pat`: pet it from the keyboard
+- `/pet debug`: dots over where the pet can be grabbed, and what it knows of the screen in its name tag; again to turn off
 
 ## Options
 
