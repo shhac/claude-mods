@@ -13,7 +13,7 @@ Mods for [Claude Code](https://claude.com/claude-code): changes to its interface
 
 ## Add a mod to Claude Code
 
-This repo is a plugin marketplace named `shhac-claude-mods`. Each mod installs as a plugin from it.
+This repo is a plugin marketplace named `claude-mods.paulie.app`. Each mod installs as a plugin from it.
 
 ### One step
 
@@ -33,7 +33,7 @@ claude plugin install pets --marketplace shhac/claude-mods
 
 ```
 /plugin marketplace add shhac/claude-mods
-/plugin install pets@shhac-claude-mods
+/plugin install pets@claude-mods.paulie.app
 ```
 
 `/plugin` on its own lists the marketplace's mods to browse and install.
@@ -53,11 +53,11 @@ claude plugin configure pets
 ## Update, disable or remove
 
 ```sh
-claude plugin marketplace update shhac-claude-mods
-claude plugin update pets@shhac-claude-mods
+claude plugin marketplace update claude-mods.paulie.app
+claude plugin update pets@claude-mods.paulie.app
 
-claude plugin disable pets@shhac-claude-mods
-claude plugin uninstall pets@shhac-claude-mods
+claude plugin disable pets@claude-mods.paulie.app
+claude plugin uninstall pets@claude-mods.paulie.app
 ```
 
 ## Try a mod without installing it
