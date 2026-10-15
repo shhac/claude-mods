@@ -10,6 +10,7 @@ import { tend } from './keeper'
 import { menuHover, pickFromMenu, toggleMenu } from './menu-actions'
 import { react, steer } from './player'
 import { belowRows, planFor, screen } from './stage'
+import type { Size } from './stage'
 
 // The pointer on the pet, its name tag and its menu: hovering, dragging,
 // clicking, and the messages their surfaces post.
@@ -93,10 +94,33 @@ async function moveTo($: EngineInterface, drag: Drag, wanted: Offset, isDrop: bo
   if (at.right !== was.right) steer($, at.right < was.right ? 'right' : 'left')
 }
 
+type Move = { dx: number; dy: number }
+type Aim = { fromRight: number; up: number }
+
+// Where a drag puts the pet: `dx`, `dy` are the whole way from the press, and
+// offsets count from the right and up, against the pointer's way.
+export const offsetForDrag = (from: Offset, move: Move): Offset => ({ right: from.right - move.dx, lift: from.lift - move.dy })
+
+// Where the caption's drag puts the pet: its middle under the pointer, which
+// counts up from the footer. The conversation's bottom sits the prompt area's
+// height above the footer, and lift 0, the last row we know of, is higher by
+// the rows no hook sees.
+export const offsetForAim = (aim: Aim, petSize: Size, promptRows: number, below: number): Offset => ({
+  right: aim.fromRight - Math.floor(petSize.columns / 2),
+  lift: aim.up - (promptRows - 1) - Math.floor(petSize.rows / 2) - below,
+})
+
+// The docked pet's catcher, as the caption counts: columns in from the
+// footer's right, rows up from the footer row.
+export const aimFromDocked = (x: number, y: number, columns: number): Aim => ({
+  fromRight: 1 + (columns - 1 - x),
+  up: -PROMPT_DOCK_TOP - y,
+})
+
 const heldBy = (requestId: string) => (mirror.catcher?.requestId === requestId ? mirror.catcher.at : undefined)
 
 // The pet dragged by its catcher: `dx`, `dy` are the whole way from the press.
-async function dragPet($: EngineInterface, requestId: string, gesture: string, move: { dx: number; dy: number }, isDrop: boolean) {
+async function dragPet($: EngineInterface, requestId: string, gesture: string, move: Move, isDrop: boolean) {
   const current = mirror.drag
   const drag: Drag =
     current !== undefined && current.gesture === gesture
@@ -104,25 +128,18 @@ async function dragPet($: EngineInterface, requestId: string, gesture: string, m
       : { gesture, requestId, from: mirror.offset, catcher: heldBy(requestId), watchdog: undefined }
   mirror.drag = drag
 
-  await moveTo($, drag, { right: drag.from.right - move.dx, lift: drag.from.lift - move.dy }, isDrop)
+  await moveTo($, drag, offsetForDrag(drag.from, move), isDrop)
 }
 
-// The pet dragged by the footer caption: its middle follows the pointer, which
-// counts up from the footer. The conversation's bottom sits the prompt area's
-// height above it, and lift 0, the last row we know of, is higher by the rows
-// no hook sees.
-async function aimPet($: EngineInterface, requestId: string, aim: { fromRight: number; up: number }, isDrop: boolean) {
+// The pet dragged by the footer caption: its middle follows the pointer.
+async function aimPet($: EngineInterface, requestId: string, aim: Aim, isDrop: boolean) {
   if (mirror.dock !== 'conversation') await setDock($, 'conversation')
 
   const petSize = sizeOf(mirror.size)
   const drag: Drag = mirror.drag ?? { gesture: 'grip', requestId, from: mirror.offset, catcher: undefined, watchdog: undefined }
   mirror.drag = drag
 
-  const wanted = {
-    right: aim.fromRight - Math.floor(petSize.columns / 2),
-    lift: aim.up - (screen.promptRows - 1) - Math.floor(petSize.rows / 2) - belowRows(),
-  }
-  await moveTo($, drag, wanted, isDrop)
+  await moveTo($, drag, offsetForAim(aim, petSize, screen.promptRows, belowRows()), isDrop)
 }
 
 // A click on the pet pets it, one on the caption doesn't; on either, a double
@@ -163,11 +180,7 @@ export async function onHandle($: EngineInterface, requestId: string, element: s
   // Docked, the catcher is the footer's: the pet follows the pointer, as
   // from the caption, counted from the footer row.
   if (requestId === mirror.footerId) {
-    const columns = sizeOf(mirror.size).columns
-    const aim = {
-      fromRight: 1 + (columns - 1 - numberField(data, 'x')),
-      up: -(PROMPT_DOCK_TOP + numberField(data, 'y')),
-    }
+    const aim = aimFromDocked(numberField(data, 'x'), numberField(data, 'y'), sizeOf(mirror.size).columns)
     await aimPet($, requestId, aim, kind === 'drop')
     return
   }
