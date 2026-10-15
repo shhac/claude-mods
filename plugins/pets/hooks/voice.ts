@@ -55,7 +55,7 @@ async function hush($: EngineInterface, generation: number) {
 
 async function ask($: EngineInterface, system: string | undefined, prompt: string) {
   try {
-    const reply = await $.model.complete({ model: MODEL, system, prompt, maxTokens: 60, effort: 'low', timeoutMs: 8000 })
+    const reply = await $.model.complete({ model: MODEL, system, prompt, maxTokens: 60, timeoutMs: 8000 })
     return reply.isAnswered ? reply.text : undefined
   } catch {
     return undefined
