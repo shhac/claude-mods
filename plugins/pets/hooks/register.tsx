@@ -211,7 +211,11 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.surface !== 'terminal') return next(e)
-    if (e.viewport !== undefined) noteBottomSlot(e.viewport.rows, e.viewport.columns, e.props.maxRows)
+    // A longer prompt shrinks the conversation, and the row carrying the pet
+    // won't redraw for that by itself: left as it was, the pet can end up above
+    // the top of the conversation, out of sight.
+    const hasResized = e.viewport !== undefined && noteBottomSlot(e.viewport.rows, e.viewport.columns, e.props.maxRows)
+    if (hasResized && isFloating) $.ui.invalidate('ui.render')
     if (e.props.hasSurvey) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)

@@ -223,4 +223,22 @@ describe('the pet band', () => {
     expect(await newer.find({ type: 'Image', key: 'pet' })).toBeDefined()
     expect(await older.find({ type: 'Image', key: 'pet' })).toBeUndefined()
   })
+
+  test('a longer prompt pulls the pet back inside the shrunken conversation', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const footer = await $.ui.mount(FOOTER)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const floating = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
+
+    // As high as a 33-row conversation goes: its top row, 5 rows into the host.
+    await footer.pointer({ type: 'down', x: 3, y: 0, button: 'left' })
+    await footer.pointer({ type: 'up', x: 3, y: -200, button: 'left' })
+    expect((await floating())?.props).toMatchObject({ top: 5 })
+
+    // The prompt grows by five rows: the conversation's top is five rows lower.
+    await $.ui.mount({ ...FLOATING_BAND, props: { ...FLOATING_BAND.props, maxRows: 8 } })
+    expect((await floating())?.props).toMatchObject({ top: 10 })
+  })
 })

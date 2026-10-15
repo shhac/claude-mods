@@ -17,6 +17,8 @@ export const screen = {
   rows: 40,
   // What the bottom slot (band, prompt, footer) leaves the conversation.
   conversationRows: 30,
+  // The prompt box, the lines under it and the footer.
+  promptRows: 10,
 }
 
 export function noteRow(requestId: string, onScreen: OnScreen | null | undefined) {
@@ -30,11 +32,17 @@ export function noteRow(requestId: string, onScreen: OnScreen | null | undefined
 
 // The band's maxRows is what the bottom slot, capped at half the terminal, has
 // left above the prompt; the rest of that half is the prompt and footer.
+// Says whether the conversation's size changed, which moves the pet's limits.
 export function noteBottomSlot(rows: number, columns: number, bandMaxRows: number) {
   const promptRows = Math.max(0, Math.floor(rows / 2) - bandMaxRows)
+  const conversationRows = Math.max(1, rows - promptRows)
+  const hasChanged = conversationRows !== screen.conversationRows || columns !== screen.columns
+
   screen.rows = rows
   screen.columns = columns
-  screen.conversationRows = Math.max(1, rows - promptRows)
+  screen.promptRows = promptRows
+  screen.conversationRows = conversationRows
+  return hasChanged
 }
 
 // The pet rides the bottom-most row on screen: a floating box paints over the
