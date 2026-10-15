@@ -48,6 +48,23 @@ describe('two sessions, one pet', () => {
     expect((await $.command.run(pet('stats'))).text).toContain('level 4 (90/')
   })
 
+  test('a level and an achievement earned elsewhere are not cheered here, even before the watcher looks', BAND_PLACEMENT, async ($, on) => {
+    const saved = new Map<string, unknown>()
+    const { clock } = codexHome(on, saved)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+
+    const now = clock.now()
+    otherSession(saved, care => ({ ...care, xp: 45, pets: 50, achievements: { 'pats-50': now } }))
+    await $.command.run(pet('pat'))
+
+    expect(await ui.find({ type: 'Text', text: /Level|Good pet/ })).toBeUndefined()
+    const stats = (await $.command.run(pet('stats'))).text
+    expect(stats).toContain('level 3 (45/')
+    expect(stats).toContain('petted 51×')
+    expect(stats).toContain('Good pet')
+  })
+
   test('a treat given in another session meanwhile stands: no second one', async ($, on) => {
     const saved = new Map<string, unknown>()
     const { clock } = codexHome(on, saved)
