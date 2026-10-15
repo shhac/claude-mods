@@ -35,6 +35,8 @@ Nothing sits beside the prompt box, which always spans the full width.
   - **Footer (`SessionMode`):** the bottom area: the separator lines, the prompt input and the footer rows, at least 5 rows up from the footer label. 12 rows up is cut off, and a pet docked 6 to 10 rows up vanished in a live session, so the prompt dock hangs from the prompt box's top edge, 3 rows up.
   - **Conversation row:** the whole conversation area.
 - **A site that draws nothing in the flow isn't laid out at all,** so a floating box hung off it never shows. Give the site some visible content in place.
+- **Nothing shows through the pet.** An `Image` is drawn as kitty Unicode placeholder cells, so each cell it covers replaces the text there, and transparent pixels show the terminal's background, not that text. No API hands a mod a row's drawn cells, and `Image` has no layer or z-index (kitty's own z-index needs a direct placement, not placeholders). Rebuilding the text from a row's props (a reply's markdown, say) would only approximate the engine's wrapping and colours.
+- **Copying text from under the pet copies the pet:** the placeholder characters and the bubble's border come along in the selection.
 - **Images aren't dropped at the edge.** A 5- or 6-row `Image` crossing the footer region's rows still drew.
 - **Floating boxes paint over what came *before* them in the tree, not after.** A pet hung off one conversation row is covered by every later row's text, so the pet needs the bottom-most row as its host.
 - **Engine bug:** a box that is cut off still stops the cells under it from repainting, which leaves stale text behind (seen as `Churnereloaded`, and a leftover box of old text where the pet would have been).
