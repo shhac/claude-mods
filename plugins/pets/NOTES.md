@@ -49,6 +49,8 @@ Nothing sits beside the prompt box, which always spans the full width.
 - Ghostty reports moves within a cell, so only send an update when the cell changes, or each one costs a full redraw.
 - **The pointer's shape can't be changed:** nothing in the API sets it. A catcher `Client` does get `enter` and `leave`, so the pet lights a frame and the caption shows what it can do while the pointer is over either.
 - A right click on the footer caption arrived as a click, but one on the pet's catcher over the conversation didn't. The catchers now treat any press but the left as a click at once, without waiting for its release.
+- **A Box wrapping the engine's row takes few layout props.** `width` and `alignSelf: "stretch"` are refused ("engine node under a Box with prop width"), and the engine draws its own row instead; negative margins and spacers are fine. The test harness doesn't catch this, so check a drawing change in a live session.
+- **A running command's lines aren't rows a hook sees.** In a probe, while a Bash call ran, the pet hung from the row above them.
 - The test harness's `find` matches on tag, key and text only, not on style props like `italic`.
 
 ## Conversation rows as a host

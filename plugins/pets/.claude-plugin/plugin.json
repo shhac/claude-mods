@@ -1,6 +1,6 @@
 {
   "name": "pets",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Codex-compatible pet that floats over the conversation, reacts to what Claude is doing, chats a little and grows as you work",
   "author": {
     "name": "Paul Somers"

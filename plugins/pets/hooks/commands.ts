@@ -68,7 +68,7 @@ export async function petCommand($: EngineInterface, args: string) {
       '/pet stats | feed | pat',
       '/pet debug           show where the pet can be grabbed',
       '',
-      'On the pet: drag to move, click to pet, double-click to dock, right-click to resize.',
+      'On the pet: drag to move, click to pet, double-click to dock, right-click for its menu.',
       '',
       HOW_TO_GET_A_PET,
     ].join('\n')

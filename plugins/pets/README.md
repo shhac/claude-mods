@@ -81,11 +81,11 @@ In fullscreen the pet floats over the conversation, starting at its bottom-right
 | drag it | moves anywhere over the conversation (remembered) |
 | click | it likes being petted |
 | double click | hops onto the right end of the prompt box, or back |
-| right click | small → medium → large |
+| right click | a menu: pat, feed, size, dock, stats, hide |
 
 With the pointer over the pet or its name tag, a frame lights up around the pet and the tag says what you can do (the pointer itself can't change shape).
 
-The name tag in the footer (bottom right) works too: drag it and the pet follows the pointer, double click to dock it, right click to resize. If grabbing the pet ever misses, the tag always works.
+The name tag in the footer (bottom right) works too: drag it and the pet follows the pointer, double click to dock it, right click for the menu. If grabbing the pet ever misses, the tag always works.
 
 The pet can go right down to the bottom of the conversation, over the notices Claude Code prints there (a reload, a recap, a drafted bug report). No hook sees those rows, so there the pet can only be grabbed by its name tag, and a notice's text draws over it. Panels above the prompt, like a drafted bug report, are out of reach.
 
