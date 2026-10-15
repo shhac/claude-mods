@@ -11,8 +11,24 @@ export const CACHE = `${HOME}/.claude/cache/app.paulie.claude-mods.pets`
 export const manifest = (id: string, displayName: string) =>
   JSON.stringify({ id, displayName, description: '', spritesheetPath: 'spritesheet.webp' })
 
-// A Codex home with two pets, Codex set to the second, and slicing that works.
-export function codexHome(on: On) {
+// A store another session writes to as well, the test playing that session;
+// what's read back is a copy, as from the engine's JSON file.
+function sharedStore(on: On, saved: Map<string, unknown>) {
+  on('store.get', ($, e) => ({ value: structuredClone(saved.get(e.key)) }))
+  on('store.set', ($, e) => {
+    saved.set(e.key, structuredClone(e.value))
+    return { value: undefined }
+  })
+  on('store.delete', ($, e) => {
+    saved.delete(e.key)
+    return { value: undefined }
+  })
+  on('store.keys', () => ({ value: [...saved.keys()] }))
+}
+
+// A Codex home with two pets, Codex set to the second, and slicing that works;
+// its store shared with another session when given one.
+export function codexHome(on: On, saved?: Map<string, unknown>) {
   const files = new Map<string, string>([
     [`${HOME}/.codex/config.toml`, 'pet = "custom:nullbyte"\n'],
     [`${PETS}/dawnbyte/pet.json`, manifest('dawnbyte', 'Dawnbyte')],
@@ -23,7 +39,8 @@ export function codexHome(on: On) {
   const slicedWith: string[] = []
 
   mock.env(on, { HOME })
-  mock.store(on)
+  if (saved === undefined) mock.store(on)
+  else sharedStore(on, saved)
   // A real-looking now: a fresh pet's first treat isn't half an hour after 1970.
   const clock = mock.clock(on, { now: Date.UTC(2026, 9, 15, 12) })
 

@@ -46,7 +46,11 @@ export async function feedPet($: EngineInterface, name: string) {
   const meal = fed(care, await $.clock.now())
   if ('waitMinutes' in meal) return `${name} is still full. Try again in ${meal.waitMinutes} min.`
 
-  await tend($, () => meal.care)
+  // Fed from the care as saved; a meal another session gave meanwhile stands.
+  await tend($, (saved, now) => {
+    const again = fed(saved, now)
+    return 'care' in again ? again.care : saved
+  })
   await react($, 'happy')
   await say($, 'nom nom nom 🍪')
   return `${name} loved that.`

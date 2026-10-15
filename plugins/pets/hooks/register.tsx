@@ -13,7 +13,7 @@ import type { Look, RowShare } from './drawings'
 import type { GripProps } from './grip'
 import { fieldOf } from './fields'
 import { PROMPT_DOCK_TOP, forgetHover, onGrip, onHandle, onMenu } from './gestures'
-import { tend } from './keeper'
+import { stopWatchingCare, tend, watchCare } from './keeper'
 import { closeMenu, resetMenu, shownMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
@@ -126,6 +126,7 @@ export const register: Register = (on, options) => {
     await hushStale($)
     await settleIn($, defaultSize)
     animate($)
+    watchCare($)
 
     // A reload brings new drawing code; the rows already on screen keep the old
     // drawing until something redraws them.
@@ -138,6 +139,7 @@ export const register: Register = (on, options) => {
   on('session.end', async ($, e, next) => {
     forgetRows()
     stopMusing()
+    stopWatchingCare()
     fetchGame.generation += 1
     return next(e)
   })
