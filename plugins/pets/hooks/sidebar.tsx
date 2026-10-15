@@ -1,6 +1,7 @@
 import type { Elements, RenderElement } from 'claude-code'
 
 import type { Bubble, Dock, Sections, SizeName } from '../types'
+import type { ActionButton } from './actions'
 import { PLACES, SIZE_NAMES } from './controls'
 import { bubbleBox, picture } from './drawings'
 import type { Look } from './drawings'
@@ -13,7 +14,6 @@ import type { Size } from './stage'
 
 type Terminal = Elements['terminal']
 
-export type SideButton = { id: string; label: string; isDisabled: boolean }
 
 export type SidebarView = {
   look: Look
@@ -24,8 +24,8 @@ export type SidebarView = {
   achievements: readonly AchievementLine[]
   achievementCount: string
   sections: Sections
-  actions: readonly SideButton[]
-  tricks: readonly SideButton[]
+  actions: readonly ActionButton[]
+  tricks: readonly ActionButton[]
   place: Dock
   size: SizeName
   said: Bubble | null
@@ -41,7 +41,7 @@ const TAIL_BELOW = { say: '▼', think: '°' } as const
 
 
 // A button, or its label dim where it can't be pressed yet.
-function button({ Button, Text }: Terminal, item: SideButton, press: Press, isCurrent = false) {
+function button({ Button, Text }: Terminal, item: ActionButton, press: Press, isCurrent = false) {
   if (item.isDisabled) {
     return (
       <Text key={item.id} dimColor>

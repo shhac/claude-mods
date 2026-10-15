@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { Sections } from '../types'
 import { columnsForRows } from './atlas'
 import { keeper } from './keeper'
-import { act, feedButton, fetchButton, trickButtons } from './menu-actions'
+import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
 import { achievementCount } from './achievements'
 import { achievementLines, headerLine, statsLines } from './pages'
 import type { SidebarView } from './sidebar'
@@ -48,7 +48,7 @@ export async function sidebarView($: EngineInterface, bodyRows: number, bodyColu
     achievements: care === undefined ? [] : achievementLines(care),
     achievementCount: care === undefined ? '' : achievementCount(care),
     sections: await read($, sections),
-    actions: [{ id: 'pat', label: '♥ Pat', isDisabled: care === undefined }, feedButton(care, now), fetchButton(care)],
+    actions: [patButton(care), feedButton(care, now), fetchButton(care)],
     tricks: trickButtons(),
     place: await read($, dock),
     size: await read($, size),

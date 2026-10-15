@@ -4,18 +4,17 @@ import type { EngineInterface } from 'claude-code'
 import type { Dock } from '../types'
 import { describeAchievements } from './achievements'
 import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
-import { describeCare, fed, petted } from './care'
+import { feedPet, hidePet, patPet } from './actions'
+import { describeCare } from './care'
 import { NEXT_SIZE, PLACES, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
-import { keeper, tend } from './keeper'
+import { keeper } from './keeper'
 import { findPets, homesFor } from './pets'
 import { react } from './player'
 import { describeStage } from './stage'
-import { say } from './voice'
 
 // `/pet` and its subcommands; each resolves the text shown in reply.
 
 const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
-const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 
 // A place by its id or the name the lists show it by (chat).
@@ -25,29 +24,6 @@ const PLACE_SAID: Record<Dock, string> = {
   conversation: 'Pet is back over the conversation.',
   prompt: 'Pet is sitting on the prompt box.',
   sidebar: 'Pet is in its sidebar.',
-}
-
-export async function feedPet($: EngineInterface, name: string) {
-  const care = keeper.care
-  if (care === undefined) return 'No pet to feed.'
-
-  const meal = fed(care, await $.clock.now())
-  if ('waitMinutes' in meal) return `${name} is still full. Try again in ${meal.waitMinutes} min.`
-
-  await tend($, () => meal.care)
-  await react($, 'happy')
-  await say($, 'nom nom nom 🍪')
-  return `${name} loved that.`
-}
-
-export async function patPet($: EngineInterface) {
-  await tend($, petted)
-  await react($, 'happy')
-}
-
-export async function hidePet($: EngineInterface, isOff = true) {
-  await update($, isHidden, () => isOff)
-  await $.store.set('isHidden', isOff)
 }
 
 async function switchPet($: EngineInterface, id: string) {

@@ -1,21 +1,17 @@
-import { atom, read } from 'claude-code'
 import type { EngineInterface, Timer } from 'claude-code'
 
 import type { MenuState } from '../types'
-import { fed, isHungry } from './care'
+import { achievementCount } from './achievements'
+import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
+import type { ActionButton } from './actions'
 import type { Care } from './care'
-import { feedPet, hidePet, patPet } from './commands'
-import { PLACES, SIZE_NAMES, isDock, isSizeName, mirror, setDock, setSize } from './controls'
+import { PLACES, SIZE_NAMES, mirror } from './controls'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
-import { achievementCount } from './achievements'
 import { achievementLines, headerLine, statsLines } from './pages'
-import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
 
 // The pet's right-click menu: what it offers, when it closes, and what a
 // pick does.
-
-const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
 
 // Untouched this long, the menu closes; left by the pointer, sooner.
 const IDLE_MS = 10000
@@ -45,12 +41,6 @@ function setMenu($: EngineInterface, state: MenuState) {
   $.ui.invalidate('ui.render')
 }
 
-function feedLabel(care: Care | undefined, now: number) {
-  const meal = care === undefined ? undefined : fed(care, now)
-  if (meal !== undefined && 'waitMinutes' in meal) return `Feed (full for ${meal.waitMinutes} min)`
-  return care !== undefined && isHungry(care) ? 'Feed (hungry!)' : 'Feed'
-}
-
 export type MenuPage = 'actions' | 'stats' | 'achievements' | 'config'
 const PAGES = new Set<string>(['actions', 'stats', 'achievements', 'config'])
 const isPage = (value: string): value is MenuPage => PAGES.has(value)
@@ -59,41 +49,16 @@ const action = (id: string, label: string, isDisabled = false): MenuRow => ({ ki
 const back = action('page:actions', '‹ Back')
 const text = (label: string): MenuRow => ({ kind: 'text', label, isDim: false })
 
-export function feedButton(care: Care | undefined, now: number) {
-  const meal = care === undefined ? undefined : fed(care, now)
-  return { id: 'feed', label: feedLabel(care, now), isDisabled: meal === undefined || 'waitMinutes' in meal }
-}
-
-export const fetchButton = (care: Care | undefined) => {
-  const isTooTired = isFetchTired()
-  return { id: 'fetch', label: isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', isDisabled: care === undefined || isTooTired }
-}
-
-export const trickButtons = () =>
-  TRICKS.map(trick => ({
-    id: `trick:${trick.id}`,
-    label: isUnlocked(trick) ? trick.name : `${trick.name}·Lv${trick.level}`,
-    isDisabled: !isUnlocked(trick),
-  }))
+const asRow = (button: ActionButton): MenuRow => ({ kind: 'action', ...button })
 
 function actionRows(care: Care | undefined, now: number): readonly MenuRow[] {
-  const meal = care === undefined ? undefined : fed(care, now)
-  const isTooTired = isFetchTired()
+  const tricks = trickButtons().map(button => ({ ...button, isCurrent: !button.isDisabled }))
 
   return [
-    action('pat', '♥ Pat', care === undefined),
-    action('feed', feedLabel(care, now), meal === undefined || 'waitMinutes' in meal),
-    action('fetch', isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', care === undefined || isTooTired),
-    {
-      kind: 'choices',
-      label: 'Tricks',
-      choices: TRICKS.map(trick => ({
-        id: `trick:${trick.id}`,
-        label: isUnlocked(trick) ? trick.name : `${trick.name}·Lv${trick.level}`,
-        isCurrent: isUnlocked(trick),
-        isDisabled: !isUnlocked(trick),
-      })),
-    },
+    asRow(patButton(care)),
+    asRow(feedButton(care, now)),
+    asRow(fetchButton(care)),
+    { kind: 'choices', label: 'Tricks', choices: tricks },
     action('page:stats', 'Stats ›', care === undefined),
     action('page:achievements', care === undefined ? 'Achievements ›' : `Achievements ${achievementCount(care)} ›`, care === undefined),
     action('page:config', 'Config ›'),
@@ -164,21 +129,4 @@ export async function pickFromMenu($: EngineInterface, id: string) {
 
   await closeMenu($)
   return act($, id)
-}
-
-// What a pick does, from the menu or a sidebar button.
-export async function act($: EngineInterface, id: string) {
-  if (id === 'fetch') return playFetch($)
-  if (id.startsWith('trick:')) return doTrick($, id.slice('trick:'.length))
-
-  const size = id.startsWith('size:') ? id.slice('size:'.length) : undefined
-  if (isSizeName(size)) return setSize($, size)
-  const place = id.startsWith('place:') ? id.slice('place:'.length) : undefined
-  if (isDock(place)) return setDock($, place)
-  if (id === 'hide') return hidePet($)
-
-  const current = await read($, pet)
-  if (current === null) return
-  if (id === 'pat') return patPet($)
-  if (id === 'feed') return feedPet($, current.displayName)
 }
