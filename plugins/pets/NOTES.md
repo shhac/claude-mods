@@ -15,6 +15,17 @@ What we measured building this mod against Claude Code 2.1.299 in fullscreen (cm
 - A `/clear` raises `session.end` with `reason: 'clear'` and no `session.start` after it, and conversation rows disappear without reporting `onScreen: null`.
 - `/home/...` counts as a network location on macOS (autofs), so the `Image` file check refuses it. Use `/Users/...` in fixtures.
 
+## Several sessions, one store
+
+Read from Claude Code 2.1.300's own code and its docs, and pinned in `tests/sessions.test.ts`.
+
+- **`$.store` is one JSON file per plugin, shared by every session** (`~/.claude/plugins/store/<plugin>-<hash>.json`). Each `set` or `delete` takes a lock on the file across processes, reads it fresh and changes only its own key, so one key never clobbers another. Each `get` reads the file fresh; nothing is cached.
+- **A plugin's own `get` then `set` isn't atomic,** and there's no compare-and-swap. Keep the gap to the change itself: read, apply, write. Don't save a copy loaded at `session.start`. That was how two sessions overwrote each other's care.
+- **No event says the store changed.** We poll it with `$.clock.every`. A hot reload cancels the timer with the old code, so start it again on `session.start` and stop it on `session.end`.
+- **Every `$.state` write redraws the drawings that read that value, even when the value is the same.** Writing a badge whose text hadn't changed still redrew the sidebar.
+- **A dispatch reads `$.state` at one moment** ("whatever is written meanwhile"), so a value written earlier in the same hook doesn't read back until the next dispatch. Pass it along instead (`adopt` returns the care it loaded). `$.state.set(ref, value, { ifVersion })` writes only if nothing changed since that read, which suits a background take-up that should lose to a local change.
+- **The test kit doesn't model that one moment:** a read after a write in the same dispatch sees the new value there, so a test can't catch code that relies on it.
+
 ## Where a mod can draw
 
 Spots a mod can draw into near the prompt:
