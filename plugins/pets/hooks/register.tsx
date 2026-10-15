@@ -1,19 +1,17 @@
 import { atom, read } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Activity, Dock, SizeName } from '../types'
+import type { Activity, SizeName } from '../types'
 import { settleIn } from './adoption'
-import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
-import { afterTest, afterTool, afterTurn, isHungry, isSleepy } from './care'
+import { afterTest, afterTool, afterTurn } from './care'
 import { isTestRun } from './checks'
 import { petCommand } from './commands'
 import { SIDEBAR, aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
 import type { ShownMenu } from './drawings'
-import type { Look } from './drawings'
 import type { GripProps } from './grip'
-import { keeper, tend } from './keeper'
+import { tend } from './keeper'
 import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
@@ -30,11 +28,6 @@ import type { Chatter } from './voice'
 const PROMPT_DOCK_TOP = -3
 
 // The validator reads state refs per file, so each file declares the atoms it uses.
-const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
-const activity = atom({ plugin: 'pets', key: 'activity' } as const, 'ready')
-const reaction = atom({ plugin: 'pets', key: 'reaction' } as const, null)
-const detail = atom({ plugin: 'pets', key: 'detail' } as const, null)
-const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 const offset = atom({ plugin: 'pets', key: 'offset' } as const, { right: 0, lift: 0 })
 const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
