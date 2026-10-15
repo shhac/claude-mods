@@ -48,6 +48,12 @@ describe('looking after the pet', () => {
     expect(badgeOf({ ...newCare(NOW), xp: 45, mood: 61 })).toBe('Lv3 ♥♥♥♡♡')
   })
 
+  test('a negative count or xp from the store reads as none', () => {
+    const care = careFrom({ xp: -10, pets: -3, streak: 0 }, NOW)
+    expect(badgeOf(care)).toBe('Lv1 ♥♥♥♥♡')
+    expect(care).toMatchObject({ xp: 0, pets: 0, streak: 1 })
+  })
+
   test('a garbled store starts fresh, field by field', () => {
     expect(careFrom({ xp: 12, mood: 'happy', streak: 3 }, NOW)).toMatchObject({ xp: 12, mood: 70, streak: 3, adoptedAt: NOW })
     expect(careFrom('nope', NOW)).toEqual(newCare(NOW))

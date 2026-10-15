@@ -8,7 +8,8 @@ import { feedPet, hidePet, patPet } from './commands'
 import { isDock, isSizeName, mirror, setDock, setSize } from './controls'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
-import { achievementCount, achievementLines, headerLine, statsLines } from './pages'
+import { achievementCount } from './achievements'
+import { achievementLines, headerLine, statsLines } from './pages'
 import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
 
 // The pet's right-click menu: what it offers, when it closes, and what a

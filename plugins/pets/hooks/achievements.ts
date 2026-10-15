@@ -32,9 +32,12 @@ export function award(care: Care, now: number): { care: Care; earned: readonly A
 
 export const isEarned = (care: Care, achievement: Achievement) => care.achievements[achievement.id] !== undefined
 
+export const achievementCount = (care: Care) =>
+  `${ACHIEVEMENTS.filter(one => isEarned(care, one)).length}/${ACHIEVEMENTS.length}`
+
 // For the stats: how many, and which.
 export function describeAchievements(care: Care) {
   const earned = ACHIEVEMENTS.filter(one => isEarned(care, one))
   const names = earned.length === 0 ? 'none yet' : earned.map(one => one.name).join(', ')
-  return `🏆 ${earned.length}/${ACHIEVEMENTS.length}: ${names}`
+  return `🏆 ${achievementCount(care)}: ${names}`
 }

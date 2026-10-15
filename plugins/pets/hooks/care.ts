@@ -78,6 +78,10 @@ const numberOr = (record: Record<string, unknown>, key: keyof Care, fallback: nu
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
+// Counts and xp never go below nothing: a negative xp would make no level.
+const countOr = (record: Record<string, unknown>, key: keyof Care, fallback: number) =>
+  Math.max(0, numberOr(record, key, fallback))
+
 // What the store held, made whole: a field missing or garbled starts fresh.
 export function careFrom(stored: unknown, now: number): Care {
   const fresh = newCare(now)
@@ -85,25 +89,25 @@ export function careFrom(stored: unknown, now: number): Care {
 
   const record: Record<string, unknown> = { ...stored }
   return {
-    xp: numberOr(record, 'xp', fresh.xp),
+    xp: countOr(record, 'xp', fresh.xp),
     mood: clampMood(numberOr(record, 'mood', fresh.mood)),
-    pets: numberOr(record, 'pets', 0),
-    treats: numberOr(record, 'treats', 0),
-    turns: numberOr(record, 'turns', 0),
-    tools: numberOr(record, 'tools', 0),
+    pets: countOr(record, 'pets', 0),
+    treats: countOr(record, 'treats', 0),
+    turns: countOr(record, 'turns', 0),
+    tools: countOr(record, 'tools', 0),
     adoptedAt: numberOr(record, 'adoptedAt', now),
     lastSeenAt: numberOr(record, 'lastSeenAt', now),
     lastFedAt: numberOr(record, 'lastFedAt', 0),
-    streak: numberOr(record, 'streak', 1),
+    streak: Math.max(1, numberOr(record, 'streak', 1)),
     lastDay: typeof record.lastDay === 'string' ? record.lastDay : fresh.lastDay,
     fullness: clampTo(0, numberOr(record, 'fullness', fresh.fullness)),
     energy: clampTo(0, numberOr(record, 'energy', fresh.energy)),
-    fetches: numberOr(record, 'fetches', 0),
-    tricks: numberOr(record, 'tricks', 0),
-    testsPassed: numberOr(record, 'testsPassed', 0),
-    greenStreak: numberOr(record, 'greenStreak', 0),
-    bestGreenStreak: numberOr(record, 'bestGreenStreak', 0),
-    nightTurns: numberOr(record, 'nightTurns', 0),
+    fetches: countOr(record, 'fetches', 0),
+    tricks: countOr(record, 'tricks', 0),
+    testsPassed: countOr(record, 'testsPassed', 0),
+    greenStreak: countOr(record, 'greenStreak', 0),
+    bestGreenStreak: countOr(record, 'bestGreenStreak', 0),
+    nightTurns: countOr(record, 'nightTurns', 0),
     achievements: achievementsFrom(record.achievements),
   }
 }
@@ -115,10 +119,21 @@ function achievementsFrom(stored: unknown): Record<string, number> {
 
 export const levelOf = (xp: number) => Math.floor(Math.sqrt(xp / 10)) + 1
 export const heartsOf = (mood: number) => Math.min(5, Math.max(0, Math.round(mood / 20)))
-export const badgeOf = (care: Care) => {
-  const hearts = heartsOf(care.mood)
-  return `Lv${levelOf(care.xp)} ${'♥'.repeat(hearts)}${'♡'.repeat(5 - hearts)}`
+
+export const heartsLine = (mood: number) => {
+  const hearts = heartsOf(mood)
+  return `${'♥'.repeat(hearts)}${'♡'.repeat(5 - hearts)}`
 }
+
+// Where the xp stands within this level, 0 to 100.
+export function levelProgress(xp: number) {
+  const level = levelOf(xp)
+  const from = 10 * (level - 1) ** 2
+  const to = 10 * level ** 2
+  return { level, nextAt: to, percent: Math.round(((xp - from) / (to - from)) * 100) }
+}
+
+export const badgeOf = (care: Care) => `Lv${levelOf(care.xp)} ${heartsLine(care.mood)}`
 
 // Back after a while: mood drifts down with the hours away and the pet gets
 // a little hungry, never below the floors; it rested, so it has energy; and
@@ -241,13 +256,11 @@ export const meter = (value: number) => {
 export const daysTogether = (care: Care, now: number) => Math.floor((now - care.adoptedAt) / DAY_MS) + 1
 
 export function describeCare(name: string, care: Care, now: number) {
-  const level = levelOf(care.xp)
-  const nextAt = level * level * 10
-  const hearts = heartsOf(care.mood)
+  const { level, nextAt } = levelProgress(care.xp)
 
   return [
     `${name} · level ${level} (${care.xp}/${nextAt} xp)`,
-    `mood ${'♥'.repeat(hearts)}${'♡'.repeat(5 - hearts)} ${care.mood}/100`,
+    `mood ${heartsLine(care.mood)} ${care.mood}/100`,
     `day ${daysTogether(care, now)} together · ${care.streak}-day streak`,
     `fullness ${meter(care.fullness)} · energy ${meter(care.energy)}`,
     `watched ${care.turns} replies and ${care.tools} tool calls · petted ${care.pets}× · ${care.treats} treats`,
