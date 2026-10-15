@@ -51,6 +51,10 @@ Nothing sits beside the prompt box, which always spans the full width.
 - A right click on the footer caption arrived as a click, but one on the pet's catcher over the conversation didn't. The catchers now treat any press but the left as a click at once, without waiting for its release.
 - **A Box wrapping the engine's row takes few layout props.** `width` and `alignSelf: "stretch"` are refused ("engine node under a Box with prop width"), and the engine draws its own row instead; negative margins and spacers are fine. The test harness doesn't catch this, so check a drawing change in a live session.
 - **A running command's lines aren't rows a hook sees.** In a probe, while a Bash call ran, the pet hung from the row above them.
+- **A pane (the sidebar)** opened unasked is placed only from 144 columns; one that isn't placed waits and turns up later, so close it. An asked open on a narrow terminal is placed `inline` above the prompt instead. A `Button`'s `onPress` may call a top-level function with `$`.
+- **`$.ui.invalidate('ui.render')` redraws every drawing, panes included**, so state that changes seldom (size, dock) needs no atom: measured live, a size change redrew the host row's picture from 3×6 to 6×11 cells.
+- **The prompt dock sits 3 rows above the footer caption,** which lands on the prompt box only where the caption shares the first footer row; a wide status line pushes the caption to a row of its own, and the docked pet ends up over the status line.
+- The test harness can't raise `ui.close` (or any close the person makes), so closing the sidebar by hand is untested.
 - The test harness's `find` matches on tag, key and text only, not on style props like `italic`.
 
 ## Conversation rows as a host

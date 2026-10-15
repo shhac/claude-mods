@@ -89,6 +89,12 @@ The name tag in the footer (bottom right) works too: drag it and the pet follows
 
 The pet can go right down to the bottom of the conversation, over the notices Claude Code prints there (a reload, a recap, a drafted bug report). No hook sees those rows, so there the pet can only be grabbed by its name tag, and a notice's text draws over it. Panels above the prompt, like a drafted bug report, are out of reach.
 
+## The sidebar
+
+The pet can also live in a sidebar beside the conversation: pick **Config › Place › sidebar** in its right-click menu, or run `/pet dock sidebar`. Top to bottom it shows the pet's level and mood, what it's doing, its stats, its achievements and config (folded until you open them) and its actions, with the pet itself at the bottom, level with the prompt, under its speech bubble. While it's there nothing of the pet is drawn over the chat or in the footer. Close the sidebar, or pick another place, to bring the pet back.
+
+The sidebar needs a fullscreen terminal at least 144 columns wide to open by itself when a session starts; narrower, the pet floats for that session and goes back to the sidebar next time there's room.
+
 ## Chatter
 
 The pet says how it feels about what's going on: not what Claude is doing, which the conversation already shows. Haiku speaks for it, told who the pet is (its name, its Codex description, its mood and level), what you asked, what Claude has done since and what the pet said already. It has a feeling about a tool call at most every 12 seconds, asks the model at most every 20, and fills in between with lines of its own. While Claude goes quiet to think, the pet muses in a thought bubble. When a reply lands it makes a cute, slightly snarky remark about it.
@@ -113,7 +119,7 @@ The pet levels up as it watches you work (replies and tool calls earn xp), likes
 - `/pet off` / `/pet on`: hide or show the pet
 - `/pet home`: back to its corner over the conversation
 - `/pet size [small|medium|large]`: set the size, or cycle it
-- `/pet dock`: over the prompt box, or back over the conversation
+- `/pet dock [chat|prompt|sidebar]`: move the pet there; with no place, between the prompt box and the conversation
 - `/pet stats`: level, mood, streak and what it has watched
 - `/pet feed`: a treat, at most every half hour
 - `/pet pat`: pet it from the keyboard
