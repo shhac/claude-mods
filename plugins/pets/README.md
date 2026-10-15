@@ -81,7 +81,7 @@ In fullscreen the pet floats over the conversation, starting at its bottom-right
 | drag it | moves anywhere over the conversation (remembered) |
 | click | it likes being petted |
 | double click | hops onto the right end of the prompt box, or back |
-| right click | a menu: pat, feed, size, dock, stats, hide |
+| right click | a menu: pat, feed, fetch, tricks, size, dock, stats, hide |
 
 With the pointer over the pet or its name tag, a frame lights up around the pet and the tag says what you can do (the pointer itself can't change shape).
 
@@ -98,6 +98,12 @@ Set `chatter` to `quiet` for the pet's own lines with no model calls, or `off` f
 ## Looking after it
 
 The pet levels up as it watches you work (replies and tool calls earn xp), likes being petted and fed, and keeps a streak of the days you visit. Its mood drifts down a little while you're away but never drops below a floor, and failures only dent it. The footer shows its level and mood hearts: `Dawnbyte Lv3 ♥♥♥♥♡`. Each pet keeps its own stats.
+
+- **Hunger and energy:** work tires it a little and makes it hungrier; time away rests it. A treat fills it up. Neither drops low enough to sulk; between turns it just says it's Sleepy or Hungry.
+- **Fetch:** from the menu, the pet runs to the far side of the conversation and back (on the spot when docked). It cheers it up, tires it, and wants a minute's rest between games.
+- **Tricks:** learned as it levels up: wave at Lv2, jump at Lv3, dance at Lv4, reading along at Lv6.
+- **Test runs:** when Claude runs your tests, a green run is cheered and builds a streak; a red one gets a wince.
+- **Achievements:** thirteen to earn once each, from a first reply to a 30-day streak, ten green test runs in a row, or working past midnight. `/pet stats` lists them.
 
 ## Commands
 
