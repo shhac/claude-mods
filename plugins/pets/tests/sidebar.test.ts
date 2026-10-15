@@ -53,4 +53,29 @@ describe("the pet's sidebar", () => {
     // The unplaced pane would wait for room and turn up later; it's closed.
     expect(panes).toEqual(['close app-paulie-claude-mods-pets-sidebar'])
   })
+
+  test('a sidebar kept from last time, with no room now: the pet floats, and the choice is kept', async ($, on) => {
+    codexHome(on)
+    const placed = { isPlaced: true }
+    on('ui.open', () => ({ value: placed.isPlaced ? { isPlaced: true } : { isPlaced: false, reason: 'too narrow' } }))
+    on('ui.close', () => ({ value: undefined }))
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.command.run(pet('dock sidebar'))
+    await $.command.run(pet('off'))
+
+    placed.isPlaced = false
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    // Still hidden, as it was left.
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+
+    await $.command.run(pet('on'))
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeDefined()
+
+    // With room again, the next session opens the sidebar.
+    placed.isPlaced = true
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+  })
 })
