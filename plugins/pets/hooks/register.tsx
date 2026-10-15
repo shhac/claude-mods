@@ -296,16 +296,35 @@ export const register: Register = (on, options) => {
       playback.framesDir = look.framesDir
     }
 
-    return footerWithPet($.ui.resolve(e), await next(e), grip, isDocked ? { top: PROMPT_DOCK_TOP, look, petSize, isLit: await read($, isHovered) } : undefined)
+    // Undocking by a drag takes the pet away mid-drag, so the catcher stays
+    // until the drop to keep hold of the pointer.
+    mirror.footerId = e.requestId
+    const isHeld = mirror.drag?.requestId === e.requestId
+    const docked = isDocked ? { top: PROMPT_DOCK_TOP, look, petSize, isLit: await read($, isHovered) } : undefined
+    const catcher = isDocked || isHeld ? { top: PROMPT_DOCK_TOP, petSize, isOutlined: mirror.isDebug } : undefined
+    return footerWithPet($.ui.resolve(e), await next(e), grip, docked, catcher)
   })
 
-  // The pet's catcher: a drag moves it, a click pets it, a double click docks
-  // it on the prompt or back, a right click changes its size.
+  // The pet's catcher, over the conversation or docked: a drag moves it, a
+  // click pets it, a double click docks it on the prompt or back, a right
+  // click changes its size.
   on('ui.message', { element: 'handle' }, async ($, e) => {
     const kind = fieldOf(e.data, 'kind')
     if (kind === 'hover') await hover($, `${e.requestId}:handle`, fieldOf(e.data, 'isOver') === true)
     if (kind === 'click') await click($, fieldOf(e.data, 'button'), true)
     if (kind !== 'drag' && kind !== 'drop') return {}
+
+    // Docked, the catcher is the footer's: the pet follows the pointer, as
+    // from the caption, counted from the footer row.
+    if (e.requestId === mirror.footerId) {
+      const columns = sizeOf(mirror.size).columns
+      const aim = {
+        fromRight: 1 + (columns - 1 - numberField(e.data, 'x')),
+        up: -(PROMPT_DOCK_TOP + numberField(e.data, 'y')),
+      }
+      await aimPet($, e.requestId, aim, kind === 'drop')
+      return {}
+    }
 
     const gesture = `${e.requestId}:${e.element}:${numberField(e.data, 'gesture')}`
     const move = { dx: numberField(e.data, 'dx'), dy: numberField(e.data, 'dy') }

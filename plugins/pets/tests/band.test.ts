@@ -251,19 +251,19 @@ describe('the pet band', () => {
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const picture = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
 
-    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left' })
-    await footer.pointer({ type: 'up', x: 0, y: 0, button: 'left' })
+    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left', in: 'grip' })
+    await footer.pointer({ type: 'up', x: 0, y: 0, button: 'left', in: 'grip' })
     expect((await picture())?.props).toMatchObject({ top: 34 })
 
     // Up 26 rows from the footer is 20 above the conversation's bottom: the
     // pet's middle goes there.
-    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left' })
-    await footer.pointer({ type: 'move', x: 0, y: -26, button: 'left' })
+    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left', in: 'grip' })
+    await footer.pointer({ type: 'move', x: 0, y: -26, button: 'left', in: 'grip' })
     expect((await picture())?.props).toMatchObject({ top: 37 - 18 - 3 })
 
     // And back down, below where the drag began.
-    await footer.pointer({ type: 'move', x: 0, y: -10, button: 'left' })
-    await footer.pointer({ type: 'up', x: 0, y: -10, button: 'left' })
+    await footer.pointer({ type: 'move', x: 0, y: -10, button: 'left', in: 'grip' })
+    await footer.pointer({ type: 'up', x: 0, y: -10, button: 'left', in: 'grip' })
     expect((await picture())?.props).toMatchObject({ top: 37 - 2 - 3 })
   })
 
@@ -293,6 +293,30 @@ describe('the pet band', () => {
     // Its top on the prompt box's top edge, the caption moved left of it.
     const docked = (await footer.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
     expect(docked?.props).toMatchObject({ top: -3, right: 1 })
+
+    // The docked pet has its own catcher: the footer's box stretches up over
+    // it, and a double click there puts the pet back.
+    expect((await footer.findAll({ type: 'Box' }))[0]?.props).toMatchObject({ marginTop: -3 })
+    const tap = async () => {
+      await footer.pointer({ type: 'down', x: 1, y: 1, button: 'left', in: 'handle' })
+      await footer.pointer({ type: 'up', x: 1, y: 1, button: 'left', in: 'handle' })
+    }
+    await clock.advance(2000)
+    await tap()
+    await tap()
+    expect(await footer.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeDefined()
+
+    // Dragged from the dock, it comes off and follows the pointer.
+    await clock.advance(2000)
+    await click('left')
+    await click('left')
+    expect(await footer.find({ type: 'Image', key: 'pet' })).toBeDefined()
+    await footer.pointer({ type: 'down', x: 1, y: 1, button: 'left', in: 'handle' })
+    await footer.pointer({ type: 'move', x: 1, y: -20, button: 'left', in: 'handle' })
+    expect(await footer.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeDefined()
+    await footer.pointer({ type: 'up', x: 1, y: -20, button: 'left', in: 'handle' })
   })
 
   test('the pointer over the pet lights it up and says what it can do', async ($, on) => {

@@ -51,7 +51,7 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
         live.press = undefined
         surface.post(
           press.hasMoved
-            ? { kind: 'drop', gesture: live.gesture, dx, dy }
+            ? { kind: 'drop', gesture: live.gesture, dx, dy, x: event.x, y: event.y }
             : { kind: 'click', button: 'left' },
         )
         return
@@ -61,7 +61,7 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
       const sent = `${live.gesture}:${dx}:${dy}`
       if (!press.hasMoved || sent === live.sent) return
       live.sent = sent
-      surface.post({ kind: 'drag', gesture: live.gesture, dx, dy })
+      surface.post({ kind: 'drag', gesture: live.gesture, dx, dy, x: event.x, y: event.y })
     })
 
     surface.setState({ live })

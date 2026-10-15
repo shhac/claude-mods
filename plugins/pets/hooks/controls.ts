@@ -70,6 +70,8 @@ export const mirror: {
   isFrameFading: boolean
   // Where the catcher was when the pointer came over it.
   hoverKey: string
+  // The footer's drawing, which holds the docked pet's catcher.
+  footerId: string
 } = {
   offset: HOME_OFFSET,
   size: 'medium',
@@ -82,6 +84,7 @@ export const mirror: {
   isDebug: false,
   isFrameFading: false,
   hoverKey: '',
+  footerId: '',
 }
 
 // A load starts the module's own state over; the session's state and the
