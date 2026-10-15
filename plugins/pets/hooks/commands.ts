@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { Dock } from '../types'
 import { describeAchievements } from './achievements'
 import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
 import { describeCare, fed, petted } from './care'
@@ -16,6 +17,19 @@ import { say } from './voice'
 const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
 const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
+
+const PLACE_NAMES: Record<string, Dock | undefined> = {
+  chat: 'conversation',
+  conversation: 'conversation',
+  prompt: 'prompt',
+  sidebar: 'sidebar',
+}
+
+const PLACE_SAID: Record<Dock, string> = {
+  conversation: 'Pet is back over the conversation.',
+  prompt: 'Pet is sitting on the prompt box.',
+  sidebar: 'Pet is in its sidebar.',
+}
 
 export async function feedPet($: EngineInterface, name: string) {
   const care = keeper.care
@@ -65,7 +79,7 @@ export async function petCommand($: EngineInterface, args: string) {
       '/pet on | off        show or hide the pet',
       '/pet home            back to its corner',
       '/pet size [name]     small, medium or large; cycles without a name',
-      '/pet dock            onto the prompt box, or back',
+      '/pet dock [place]    chat, prompt or sidebar; toggles chat and prompt',
       '/pet stats | feed | pat',
       '/pet debug           show where the pet can be grabbed',
       '',
@@ -88,9 +102,10 @@ export async function petCommand($: EngineInterface, args: string) {
   }
 
   if (arg === 'dock') {
-    const next = mirror.dock === 'conversation' ? 'prompt' : 'conversation'
-    await setDock($, next)
-    return next === 'prompt' ? 'Pet is sitting on the prompt box.' : 'Pet is back over the conversation.'
+    const named = PLACE_NAMES[value]
+    const next = named ?? (mirror.dock === 'conversation' ? 'prompt' : 'conversation')
+    if (!(await setDock($, next))) return 'No room for the sidebar in this terminal.'
+    return PLACE_SAID[next]
   }
 
   if (arg === 'debug') {

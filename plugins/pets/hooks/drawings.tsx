@@ -20,7 +20,7 @@ export type Look = { displayName: string; framesDir: string }
 
 // The picture sits in a Box of its own, before any catcher: an unchanged
 // sibling over a bare blitted element copies the last frame back over it.
-const picture = ({ Box, Image }: Terminal, look: Look, petSize: Size) => (
+export const picture = ({ Box, Image }: Terminal, look: Look, petSize: Size) => (
   <Box>
     <Image
       key={IMAGE_KEY}
@@ -95,8 +95,11 @@ export function shapeOf(bubble: Bubble): BubbleShape {
 // under the bubble shows through.
 const padLine = (line: string, shape: BubbleShape) => ` ${line.padEnd(shape.columns - shape.tail - 4)} `
 
-// `isPetRight` puts the tail on the right, toward a pet on that side.
-const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean) => {
+// The bubble with its tail toward the pet: on its right or left, or, with
+// the pet below it, none at its side (the sidebar draws one under it).
+export type TailSide = 'right' | 'left' | 'below'
+
+export function bubbleBox({ Box, Text }: Terminal, bubble: Bubble, side: TailSide) {
   const shape = shapeOf(bubble)
   if (bubble.isFading) {
     return (
@@ -110,14 +113,14 @@ const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean)
 
   const tail = (
     <Box marginTop={1}>
-      <Text color="claude">{isPetRight ? TAIL[bubble.kind].toRight : TAIL[bubble.kind].toLeft}</Text>
+      <Text color="claude">{side === 'right' ? TAIL[bubble.kind].toRight : TAIL[bubble.kind].toLeft}</Text>
     </Box>
   )
   const isThought = bubble.kind === 'think'
 
   return (
     <Box flexDirection="row">
-      {isPetRight ? null : tail}
+      {side === 'left' ? tail : null}
       <Box flexDirection="column" borderStyle="round" borderColor="claude" borderDimColor={isThought}>
         {shape.lines.map((line, row) => (
           <Text key={`line-${row}`} italic={isThought} dimColor={isThought}>
@@ -125,7 +128,7 @@ const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean)
           </Text>
         ))}
       </Box>
-      {isPetRight ? tail : null}
+      {side === 'right' ? tail : null}
     </Box>
   )
 }
@@ -139,7 +142,7 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
   return (
     <Box width={width} flexDirection="row" justifyContent="flex-end" gap={1}>
       <Box flexDirection="column" justifyContent="flex-end" alignItems="flex-end">
-        {caption.said === null ? null : bubbleBox(elements, caption.said, true)}
+        {caption.said === null ? null : bubbleBox(elements, caption.said, 'right')}
         <Box flexDirection="row" gap={1}>
           <Text color="claude" weight="bold">
             {look.displayName}
@@ -259,7 +262,7 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
     </Box>,
     said === null ? null : (
       <Box key="bubble" position="absolute" top={plan.top + shift} right={bubbleRight}>
-        {bubbleBox(elements, said, isLeftOfPet)}
+        {bubbleBox(elements, said, isLeftOfPet ? 'right' : 'left')}
       </Box>
     ),
     <Box key="catcher" position="absolute" top={catcher.top + shift} right={catcher.right}>

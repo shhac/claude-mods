@@ -7,6 +7,7 @@ import { petted } from './care'
 import { tend } from './keeper'
 import { react, steer } from './player'
 import { belowRows, forgetRows, planFor, screen } from './stage'
+import { say } from './voice'
 import type { Size } from './stage'
 
 // Moving the pet, resizing it and docking it, by drag, click or command.
@@ -34,7 +35,12 @@ export const isOffset = (value: unknown): value is Offset =>
   typeof value.lift === 'number'
 
 export const isSizeName = (value: unknown): value is SizeName => typeof value === 'string' && SIZE_NAMES.has(value)
-export const isDock = (value: unknown): value is Dock => value === 'conversation' || value === 'prompt'
+export const isDock = (value: unknown): value is Dock =>
+  value === 'conversation' || value === 'prompt' || value === 'sidebar'
+
+// The sidebar's pane, and the width it asks for beside the conversation.
+export const SIDEBAR = 'pets-sidebar'
+const SIDEBAR_COLUMNS = 34
 
 export const sizeOf = (name: SizeName): Size => ({ rows: SIZE_ROWS[name], columns: columnsForRows(SIZE_ROWS[name]) })
 
@@ -115,9 +121,22 @@ export async function restoreControls($: EngineInterface, defaultSize: SizeName)
 
   mirror.isDebug = (await $.store.get('debug')) === true
 
+  // A sidebar opened unasked needs a wide terminal; without one the pet
+  // floats this session, and the choice is kept for the next.
   const savedDock = await $.store.get('dock')
-  mirror.dock = isDock(savedDock) ? savedDock : 'conversation'
+  const wanted = isDock(savedDock) ? savedDock : 'conversation'
+  mirror.dock = wanted === 'sidebar' && !(await openSidebar($)) ? 'conversation' : wanted
   await update($, dock, () => mirror.dock)
+}
+
+// Says whether the sidebar is drawn. One that isn't would wait and turn up
+// later, beside a pet already drawn elsewhere, so it's closed.
+async function openSidebar($: EngineInterface) {
+  const opened = await $.ui.open({ id: SIDEBAR, title: 'Pet', columns: SIDEBAR_COLUMNS })
+  if (opened.isPlaced) return true
+
+  await $.ui.close({ id: SIDEBAR })
+  return false
 }
 
 export async function setOffset($: EngineInterface, next: Offset) {
@@ -132,7 +151,21 @@ export async function setSize($: EngineInterface, next: SizeName) {
   await $.store.set('size', next)
 }
 
+// Says whether the pet went there: the sidebar needs room.
 export async function setDock($: EngineInterface, next: Dock) {
+  if (next === 'sidebar' && mirror.dock !== 'sidebar' && !(await openSidebar($))) {
+    await say($, 'no room for my sidebar here 😿')
+    return false
+  }
+
+  const was = mirror.dock
+  await settleDock($, next)
+  if (was === 'sidebar' && next !== 'sidebar') await $.ui.close({ id: SIDEBAR })
+  return true
+}
+
+// Where the pet is now, kept for next time; the sidebar already open or shut.
+export async function settleDock($: EngineInterface, next: Dock) {
   mirror.dock = next
   await update($, dock, () => next)
   await $.store.set('dock', next)

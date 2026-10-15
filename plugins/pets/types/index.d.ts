@@ -21,9 +21,12 @@ export type Offset = {
 
 export type SizeName = 'small' | 'medium' | 'large'
 
-// Where the pet lives: floating over the conversation, or over the right end
-// of the prompt box.
-export type Dock = 'conversation' | 'prompt'
+// Where the pet lives: floating over the conversation, over the right end of
+// the prompt box, or in a sidebar of its own.
+export type Dock = 'conversation' | 'prompt' | 'sidebar'
+
+// Which of the sidebar's folding sections are open.
+export type Sections = { achievements: boolean; config: boolean; actions: boolean }
 
 // The right-click menu: shut, showing, or drawn blank a moment as it goes.
 export type MenuState = 'closed' | 'open' | 'fading'
@@ -55,6 +58,7 @@ declare module 'claude-code' {
       dock: Dock
       // The bubble, while it shows.
       bubble: Bubble | null
+      sections: Sections
       // The pointer is over the pet or its name tag: both light up.
       isHovered: boolean
       // Level and mood hearts, as the caption shows them.

@@ -7,7 +7,7 @@ import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
 import { afterTest, afterTool, afterTurn, isHungry, isSleepy } from './care'
 import { isTestRun } from './checks'
 import { petCommand } from './commands'
-import { aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
+import { SIDEBAR, aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
 import type { ShownMenu } from './drawings'
@@ -17,8 +17,11 @@ import { keeper, tend } from './keeper'
 import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
+import { pressSidebar, sidebarView } from './side-panel'
+import { sidebar } from './sidebar'
 import { animate, playback, react, setActivity } from './player'
-import { describeStage, forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
+import { forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
+import { petLook, statusLine } from './status'
 import { awaitThought, feelTool, hushStale, noteRequest, remark, say, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
@@ -40,12 +43,6 @@ const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
-// What the pet does, shown while the pointer is over it or its name tag.
-const HINTS: Record<Dock, string> = {
-  conversation: 'drag · 2-click: dock · right-click: menu',
-  prompt: 'drag, 2-click: undock · right-click: menu',
-}
-
 const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch'])
 const ASKING_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode'])
 const ASKING_NOTIFICATIONS = new Set(['permission_prompt', 'elicitation_dialog'])
@@ -62,35 +59,6 @@ const fieldOf = (data: unknown, key: string) => {
 const numberField = (data: unknown, key: string) => {
   const value = fieldOf(data, key)
   return typeof value === 'number' ? value : 0
-}
-
-// What the rows need to draw the pet: whether there is one, and its frames.
-async function petLook($: EngineInterface): Promise<Look | undefined> {
-  if (await read($, isHidden)) return undefined
-
-  const current = await read($, pet)
-  return current === null ? undefined : { displayName: current.displayName, framesDir: current.framesDir }
-}
-
-// Between turns the pet says how it is: sleepy, hungry, or just ready.
-async function restingLabel($: EngineInterface) {
-  const care = keeper.care
-  if (care === undefined) return ACTIVITY_LABEL.ready
-  if (isSleepy(care, await $.clock.now())) return 'Sleepy 💤'
-  return isHungry(care) ? 'Hungry' : ACTIVITY_LABEL.ready
-}
-
-async function statusLine($: EngineInterface) {
-  if (mirror.isDebug) return `${mirror.hostKind} · ${describeStage()}`
-  if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[await read($, dock)]
-
-  const shownReaction = await read($, reaction)
-  if (shownReaction !== null) return REACTION_LABEL[shownReaction]
-
-  const tool = await read($, detail)
-  const now = await read($, activity)
-  const label = now === 'ready' ? await restingLabel($) : ACTIVITY_LABEL[now]
-  return tool === null ? label : `${label} · ${tool}`
 }
 
 async function cheerTests($: EngineInterface, hasPassed: boolean) {
@@ -119,7 +87,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'pet',
       description: 'Your Codex-compatible pet: help, list, switch, show, hide, size, dock, stats, feed',
-      argumentHint: '[help | list | <id> | on | off | home | size | dock | stats | feed | pat | debug]',
+      argumentHint: '[help | list | <id> | on | off | home | size | dock [chat|prompt|sidebar] | stats | feed | pat | debug]',
     })
 
     await hushStale($)
@@ -228,7 +196,7 @@ export const register: Register = (on, options) => {
       )
     }
 
-    if (isFloating) return next(e)
+    if (isFloating || mirror.dock === 'sidebar') return next(e)
 
     const look = await petLook($)
     if (look === undefined) return next(e)
@@ -273,6 +241,7 @@ export const register: Register = (on, options) => {
 
       // Docked, the bottom row only opens the pet's menu, at the right end
       // just above the prompt: the footer can't reach that far up.
+      if (mirror.dock === 'sidebar') return next(e)
       if (mirror.dock !== 'conversation') {
         const menu = shownMenu()
         const menuPlan = menu === undefined ? undefined : planFor({ right: 1, lift: 0 }, menuSize(menu.rows))
@@ -319,7 +288,7 @@ export const register: Register = (on, options) => {
   // The caption in the footer: the pet's name, level, mood and what it's up to,
   // and a handle for the pet. Docked on the prompt, the picture hangs from here.
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
-    if (!isFloating || e.surface !== 'terminal') return next(e)
+    if (!isFloating || e.surface !== 'terminal' || mirror.dock === 'sidebar') return next(e)
 
     const look = await petLook($)
     if (look === undefined) return next(e)
@@ -351,6 +320,27 @@ export const register: Register = (on, options) => {
     const docked = isDocked ? { top: PROMPT_DOCK_TOP, look, petSize, isLit: await read($, isHovered) } : undefined
     const catcher = isDocked || isHeld ? { top: PROMPT_DOCK_TOP, petSize, isOutlined: mirror.isDebug } : undefined
     return footerWithPet($.ui.resolve(e), await next(e), grip, docked, catcher)
+  })
+
+  // The sidebar: what the pet knows of itself, folding sections, and at the
+  // bottom, level with the prompt, its bubble, the pet and its name.
+  on('ui.render', { component: 'Pane', requestId: SIDEBAR }, async ($, e, next) => {
+    if (e.surface !== 'terminal' || mirror.dock !== 'sidebar') return next(e)
+
+    const isInline = e.props.placement === 'inline'
+    const view = await sidebarView($, e.props.scroll.bodyRows, e.props.bodyColumns, isInline)
+    if (view === undefined) return next(e)
+
+    playback.siteRequestId = e.requestId
+    playback.framesDir = view.look.framesDir
+    return sidebar($.ui.resolve(e), view, id => void pressSidebar($, id))
+  })
+
+  // Closed by its mark or a key, the sidebar sends the pet back over the
+  // conversation. Our own closes (a move elsewhere) are already settled.
+  on('ui.close', async ($, e, next) => {
+    if (e.id === SIDEBAR && e.origin.kind === 'person' && mirror.dock === 'sidebar') await settleDock($, 'conversation')
+    return next(e)
   })
 
   // The pet's catcher, over the conversation or docked: a drag moves it, a

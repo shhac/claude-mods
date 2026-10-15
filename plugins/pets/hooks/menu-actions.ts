@@ -58,6 +58,23 @@ const action = (id: string, label: string, isDisabled = false): MenuRow => ({ ki
 const back = action('page:actions', '‹ Back')
 const text = (label: string): MenuRow => ({ kind: 'text', label, isDim: false })
 
+export function feedButton(care: Care | undefined, now: number) {
+  const meal = care === undefined ? undefined : fed(care, now)
+  return { id: 'feed', label: feedLabel(care, now), isDisabled: meal === undefined || 'waitMinutes' in meal }
+}
+
+export const fetchButton = (care: Care | undefined) => {
+  const isTooTired = isFetchTired()
+  return { id: 'fetch', label: isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', isDisabled: care === undefined || isTooTired }
+}
+
+export const trickButtons = () =>
+  TRICKS.map(trick => ({
+    id: `trick:${trick.id}`,
+    label: isUnlocked(trick) ? trick.name : `${trick.name}·Lv${trick.level}`,
+    isDisabled: !isUnlocked(trick),
+  }))
+
 function actionRows(care: Care | undefined, now: number): readonly MenuRow[] {
   const meal = care === undefined ? undefined : fed(care, now)
   const isTooTired = isFetchTired()
@@ -90,9 +107,10 @@ const choicesOf = <T extends string>(label: string, prefix: string, names: reado
 
 function configRows(): readonly MenuRow[] {
   return [
-    choicesOf('Place', 'place', ['conversation', 'prompt'] as const, mirror.dock === 'prompt' ? 'prompt' : 'conversation', {
+    choicesOf('Place', 'place', ['conversation', 'prompt', 'sidebar'] as const, mirror.dock, {
       conversation: 'chat',
       prompt: 'prompt',
+      sidebar: 'sidebar',
     }),
     choicesOf('Size ', 'size', ['small', 'medium', 'large'] as const, mirror.size, { small: 'small', medium: 'medium', large: 'large' }),
     action('hide', 'Hide (/pet on brings it back)'),
@@ -151,6 +169,11 @@ export async function pickFromMenu($: EngineInterface, id: string) {
   if (page !== undefined && isPage(page)) return openMenu($, page)
 
   await closeMenu($)
+  return act($, id)
+}
+
+// What a pick does, from the menu or a sidebar button.
+export async function act($: EngineInterface, id: string) {
   if (id === 'fetch') return playFetch($)
   if (id.startsWith('trick:')) return doTrick($, id.slice('trick:'.length))
 
