@@ -8,7 +8,7 @@
     {
       "name": "pets",
       "source": "./plugins/pets",
-      "description": "A Codex-compatible pet above the prompt that reacts to what Claude is doing"
+      "description": "A Codex-compatible pet that floats over the conversation, reacts to what Claude is doing, chats a little and grows as you work"
     }
   ]
 }

@@ -4,7 +4,7 @@ Mods for [Claude Code](https://claude.com/claude-code): changes to its interface
 
 | Mod | What it does |
 | --- | --- |
-| [pets](plugins/pets) | A Codex-compatible pet that floats over the conversation and reacts to what Claude is doing |
+| [pets](plugins/pets) | A Codex-compatible pet that floats over the conversation, reacts to what Claude is doing, chats a little and grows as you work |
 
 ## Requirements
 
