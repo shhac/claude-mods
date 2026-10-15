@@ -95,21 +95,24 @@ export function shapeOf(bubble: Bubble): BubbleShape {
 // under the bubble shows through.
 const padLine = (line: string, shape: BubbleShape) => ` ${line.padEnd(shape.columns - shape.tail - 4)} `
 
+// Something floating that just went: its cells drawn blank a moment, as
+// cells a floating box leaves can keep their old text.
+const blankCells = ({ Box, Text }: Terminal, columns: number, rows: number) => (
+  <Box flexDirection="column" width={columns} height={rows}>
+    {Array.from({ length: rows }, (_, row) => (
+      <Text key={`blank-${row}`}>{' '.repeat(columns)}</Text>
+    ))}
+  </Box>
+)
+
 // The bubble with its tail toward the pet: on its right or left, or, with
 // the pet below it, none at its side (the sidebar draws one under it).
 export type TailSide = 'right' | 'left' | 'below'
 
-export function bubbleBox({ Box, Text }: Terminal, bubble: Bubble, side: TailSide) {
+export function bubbleBox(elements: Terminal, bubble: Bubble, side: TailSide) {
+  const { Box, Text } = elements
   const shape = shapeOf(bubble)
-  if (bubble.isFading) {
-    return (
-      <Box flexDirection="column" width={shape.columns} height={shape.rows}>
-        {Array.from({ length: shape.rows }, (_, row) => (
-          <Text key={`blank-${row}`}>{' '.repeat(shape.columns)}</Text>
-        ))}
-      </Box>
-    )
-  }
+  if (bubble.isFading) return blankCells(elements, shape.columns, shape.rows)
 
   const tail = (
     <Box marginTop={1}>
@@ -164,17 +167,10 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
 export type ShownMenu = { rows: readonly MenuRow[]; isFading: boolean }
 
 // The menu itself, or blank cells in its shape while it goes.
-function menuBox({ Box, Client, Text }: Terminal, menu: ShownMenu) {
+function menuBox(elements: Terminal, menu: ShownMenu) {
+  const { Client } = elements
   const size = menuSize(menu.rows)
-  if (menu.isFading) {
-    return (
-      <Box flexDirection="column">
-        {Array.from({ length: size.rows }, (_, row) => (
-          <Text key={`blank-${row}`}>{' '.repeat(size.columns)}</Text>
-        ))}
-      </Box>
-    )
-  }
+  if (menu.isFading) return blankCells(elements, size.columns, size.rows)
 
   return (
     <Client

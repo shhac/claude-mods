@@ -73,13 +73,8 @@ export async function say($: EngineInterface, text: string, kind: BubbleKind = '
 // A reload drops the timers that would take a bubble away, and the session
 // keeps the bubble: left, it would stay up for good.
 export async function hushStale($: EngineInterface) {
-  const shown = await read($, bubble)
-  if (shown === null) return
-
   voice.generation += 1
-  const generation = voice.generation
-  await update($, bubble, () => ({ ...shown, isFading: true }))
-  $.clock.after(BLANK_MS, () => void hush($, generation))
+  await blank($, voice.generation)
 }
 
 async function blank($: EngineInterface, generation: number) {

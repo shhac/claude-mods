@@ -80,12 +80,11 @@ function configRows(): readonly MenuRow[] {
 async function rowsNow($: EngineInterface, page: MenuPage): Promise<readonly MenuRow[]> {
   const care = keeper.care
   const now = await $.clock.now()
-  if (page === 'config' || care === undefined) return page === 'actions' ? actionRows(care, now) : configRows()
-  if (page === 'stats') return [{ kind: 'text', label: headerLine(care), isDim: false }, ...statsLines(care, now).map(text), back]
-  if (page === 'achievements') {
-    return [...achievementLines(care).map(line => ({ kind: 'text' as const, label: line.label, isDim: !line.isEarned })), back]
-  }
-  return actionRows(care, now)
+  if (page === 'config') return configRows()
+  // Stats and achievements need a pet's care; without one they can't be picked.
+  if (page === 'actions' || care === undefined) return actionRows(care, now)
+  if (page === 'stats') return [text(headerLine(care)), ...statsLines(care, now).map(text), back]
+  return [...achievementLines(care).map(line => ({ kind: 'text' as const, label: line.label, isDim: !line.isEarned })), back]
 }
 
 function closeIn($: EngineInterface, ms: number) {
