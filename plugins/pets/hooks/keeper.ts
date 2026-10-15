@@ -1,5 +1,5 @@
 import { atom, update } from 'claude-code'
-import type { EngineInterface } from 'claude-code'
+import type { EngineInterface, Timer } from 'claude-code'
 
 import { award } from './achievements'
 import { badgeOf, careFrom, levelOf, milestone, welcomeBack } from './care'
@@ -14,11 +14,9 @@ const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 const WATCH_MS = 5000
 
 // The care of the pet on screen; each pet keeps its own in the store.
-export const keeper: { petId: string | undefined; care: Care | undefined; watching: number } = {
-  petId: undefined,
-  care: undefined,
-  watching: 0,
-}
+export const keeper: { petId: string | undefined; care: Care | undefined } = { petId: undefined, care: undefined }
+
+const careWatch: { timer: Timer | undefined } = { timer: undefined }
 
 const storeKey = (petId: string) => `care:${petId}`
 
@@ -66,26 +64,26 @@ export async function tend($: EngineInterface, change: (care: Care, now: number)
 
 // Started per load from session.start, as a reload drops the timer.
 export function watchCare($: EngineInterface) {
-  keeper.watching += 1
-  void glance($, keeper.watching)
+  careWatch.timer?.cancel()
+  careWatch.timer = $.clock.every(WATCH_MS, () => void glance($))
 }
 
 export function stopWatchingCare() {
-  keeper.watching += 1
+  careWatch.timer?.cancel()
+  careWatch.timer = undefined
 }
 
 // Takes up what another session saved, quietly: the celebrating was theirs.
-async function glance($: EngineInterface, generation: number) {
-  if (generation !== keeper.watching) return
-
+async function glance($: EngineInterface) {
   const { petId, care } = keeper
-  if (petId !== undefined && care !== undefined) {
-    const saved = await $.store.get(storeKey(petId))
-    // A tend or a switch while reading has newer care than the store did.
-    const isUnchanged = keeper.petId === petId && keeper.care === care
-    if (isUnchanged && saved !== undefined && JSON.stringify(saved) !== JSON.stringify(care)) {
-      await show($, careFrom(saved, await $.clock.now()))
-    }
-  }
-  $.clock.after(WATCH_MS, () => void glance($, generation))
+  if (petId === undefined || care === undefined) return
+
+  const now = await $.clock.now()
+  const saved = await $.store.get(storeKey(petId))
+  if (saved === undefined) return
+  // A tend or a switch while reading has newer care than the store did.
+  if (keeper.petId !== petId || keeper.care !== care) return
+
+  const next = careFrom(saved, now)
+  if (JSON.stringify(next) !== JSON.stringify(care)) await show($, next)
 }
