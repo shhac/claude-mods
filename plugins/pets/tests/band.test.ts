@@ -189,26 +189,83 @@ describe('the pet band', () => {
     expect(floating?.props).toMatchObject({ right: 0, top: 34 })
   })
 
-  test('drags anywhere over the conversation, held inside it', async ($, on) => {
+  test('the pet itself is the handle: drag it anywhere over the conversation', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const boxes = async () => (await host.findAll({ type: 'Box' })).filter(box => box.props.position === 'absolute')
+
+    // The picture, then the catcher over it.
+    expect((await boxes()).map(box => box.props)).toMatchObject([
+      { right: 0, top: 34 },
+      { right: 0, top: 34 },
+    ])
+
+    await host.pointer({ type: 'down', x: 3, y: 1, button: 'left' })
+    await host.pointer({ type: 'move', x: -27, y: -9, button: 'left' })
+    // The picture follows; the catcher holds still under the pointer until the drop.
+    expect((await boxes()).map(box => box.props)).toMatchObject([
+      { right: 30, top: 24 },
+      { right: 0, top: 34 },
+    ])
+
+    // Far up and far left: held to the conversation's top and the screen's width.
+    await host.pointer({ type: 'move', x: -500, y: -200, button: 'left' })
+    await host.pointer({ type: 'up', x: -500, y: -200, button: 'left' })
+    expect((await boxes())[0]?.props).toMatchObject({ right: 113, top: 5 })
+
+    const home = await $.command.run(pet('home'))
+    expect(home.text).toBe('Pet is back in its corner.')
+    expect((await boxes())[0]?.props).toMatchObject({ right: 0, top: 34 })
+  })
+
+  test('the footer caption drags the pet down as well as up, and a click leaves it be', async ($, on) => {
     codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
-    const floating = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
+    const picture = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
 
-    await footer.pointer({ type: 'down', x: 3, y: 0, button: 'left' })
-    await footer.pointer({ type: 'move', x: -27, y: -10 })
-    expect((await floating())?.props).toMatchObject({ right: 30, top: 24 })
+    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left' })
+    await footer.pointer({ type: 'up', x: 0, y: 0, button: 'left' })
+    expect((await picture())?.props).toMatchObject({ top: 34 })
 
-    // Far up and far left: held to the conversation's top and the screen's width.
-    await footer.pointer({ type: 'move', x: -500, y: -200 })
-    await footer.pointer({ type: 'up', x: -500, y: -200, button: 'left' })
-    expect((await floating())?.props).toMatchObject({ right: 113, top: 5 })
+    // Up 26 rows from the footer is 20 above the conversation's bottom: the
+    // pet's middle goes there.
+    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'left' })
+    await footer.pointer({ type: 'move', x: 0, y: -26, button: 'left' })
+    expect((await picture())?.props).toMatchObject({ top: 37 - 18 - 3 })
 
-    const home = await $.command.run(pet('home'))
-    expect(home.text).toBe('Pet is back in its corner.')
-    expect((await floating())?.props).toMatchObject({ right: 0, top: 34 })
+    // And back down, below where the drag began.
+    await footer.pointer({ type: 'move', x: 0, y: -10, button: 'left' })
+    await footer.pointer({ type: 'up', x: 0, y: -10, button: 'left' })
+    expect((await picture())?.props).toMatchObject({ top: 37 - 2 - 3 })
+  })
+
+  test('a click pets it, a right click resizes it, a double click docks it on the prompt', async ($, on) => {
+    const { clock } = codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const footer = await $.ui.mount(FOOTER)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const click = async (button: 'left' | 'right') => {
+      await host.pointer({ type: 'down', x: 1, y: 1, button })
+      await host.pointer({ type: 'up', x: 1, y: 1, button })
+    }
+
+    await click('left')
+    expect((await $.command.run(pet('stats'))).text).toContain('petted 1×')
+
+    await click('right')
+    expect((await host.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
+
+    await clock.advance(2000)
+    await click('left')
+    await click('left')
+    expect(await host.find({ type: 'Image', key: 'pet' })).toBeUndefined()
+    expect((await footer.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {
@@ -228,17 +285,17 @@ describe('the pet band', () => {
     codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
     await $.ui.mount(FLOATING_BAND)
-    const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const floating = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
 
     // As high as a 33-row conversation goes: its top row, 5 rows into the host.
-    await footer.pointer({ type: 'down', x: 3, y: 0, button: 'left' })
-    await footer.pointer({ type: 'up', x: 3, y: -200, button: 'left' })
+    await host.pointer({ type: 'down', x: 1, y: 1, button: 'left' })
+    await host.pointer({ type: 'up', x: 1, y: -200, button: 'left' })
     expect((await floating())?.props).toMatchObject({ top: 5 })
 
     // The prompt grows by five rows: the conversation's top is five rows lower.
     await $.ui.mount({ ...FLOATING_BAND, props: { ...FLOATING_BAND.props, maxRows: 8 } })
     expect((await floating())?.props).toMatchObject({ top: 10 })
   })
+
 })

@@ -46,6 +46,8 @@ export const REACTION_ANIMATION: Record<Reaction, Animation> = {
   greeting: 'waving',
   celebrating: 'jumping',
   failed: 'failed',
+  happy: 'jumping',
+  levelUp: 'jumping',
 }
 
 // Labels follow the Codex CLI pet's states so a pet reads the same in both.
@@ -60,6 +62,8 @@ export const REACTION_LABEL: Record<Reaction, string> = {
   greeting: 'Hello!',
   celebrating: 'Done!',
   failed: 'Blocked',
+  happy: '♥',
+  levelUp: 'Level up!',
 }
 
 export const frameCount = (animation: Animation) => ANIMATIONS[animation].durations.length

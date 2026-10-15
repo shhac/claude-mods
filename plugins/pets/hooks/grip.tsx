@@ -1,68 +1,71 @@
 import type { ClientModule, ClientPointerEvent } from 'claude-code'
 
-import type { Offset } from '../types'
-
 export type GripProps = {
-  offset: Offset
+  // Columns of padding after the caption, so it sits under the pet.
+  pad: number
   name: string
+  // The pet's level and mood, drawn after its name.
+  badge: string
   status: string
 }
 
-type Grab = { x: number; y: number; from: Offset }
+type Press = { x: number; y: number; button: 'left' | 'middle' | 'right'; hasMoved: boolean }
 
 // Mutable per instance: the module function runs again on every redraw, while
 // the pointer listener set on the first run must read the latest values.
-type Live = { offset: Offset; columns: number; grab: Grab | undefined; sent: Offset | undefined }
+type Live = { columns: number; press: Press | undefined; sent: string }
 
-// The footer site is right-aligned and the caption is padded to sit under the
-// pet, so the region grows leftwards as the pet moves: count from its right
-// edge to get a column that stays put on screen.
-const fromRight = (event: ClientPointerEvent, live: Live) => ({ x: event.x - live.columns, y: event.y })
+// The footer is right-aligned and the caption padded to sit under the pet, so
+// the region grows leftwards as the pet moves: count from its right edge for
+// a column that stays put on screen. Rows count up from the footer, 0 on it.
+const aimOf = (event: ClientPointerEvent, live: Live) => ({ fromRight: live.columns - 1 - event.x, up: -event.y })
 
-const isSame = (a: Offset | undefined, b: Offset) => a !== undefined && a.right === b.right && a.lift === b.lift
-
-// The pet's caption, drawn in the footer's flow right under the pet. A floating
-// box never receives the pointer (it lands on the box's parent), so the caption
-// is the handle: press it and drag, and the drag keeps the pointer until released.
+// The pet's caption in the footer, and a handle for the pet from there: press
+// it and drag, and the pet follows the pointer anywhere over the conversation,
+// down as well as up. A press with no drag is a click.
 const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
   const { Box, Text } = surface.elements
 
   if (surface.state === undefined) {
-    const live: Live = { offset: props.offset, columns: surface.columns, grab: undefined, sent: undefined }
+    const live: Live = { columns: surface.columns, press: undefined, sent: '' }
 
     surface.onPointer(event => {
-      if (event.type === 'down' && event.button === 'left') {
-        live.grab = { ...fromRight(event, live), from: live.offset }
+      if (event.type === 'down' && event.button !== undefined) {
+        live.press = { x: event.x, y: event.y, button: event.button, hasMoved: false }
         return
       }
 
-      const { grab } = live
-      if (grab === undefined || (event.type !== 'move' && event.type !== 'up')) return
+      const { press } = live
+      if (press === undefined || (event.type !== 'move' && event.type !== 'up')) return
 
-      const now = fromRight(event, live)
-      const to: Offset = { right: grab.from.right - (now.x - grab.x), lift: grab.from.lift - (now.y - grab.y) }
-      const isDrop = event.type === 'up'
-      if (isDrop) live.grab = undefined
+      if (event.type === 'up') {
+        live.press = undefined
+        surface.post(press.hasMoved ? { kind: 'drop', ...aimOf(event, live) } : { kind: 'click', button: press.button })
+        return
+      }
 
-      // Pointers report moves within a cell; only a new cell is worth a redraw.
-      if (!isDrop && isSame(live.sent, to)) return
-      live.sent = to
-      surface.post({ kind: isDrop ? 'drop' : 'drag', ...to })
+      // Only a drag moves the pet: a click on the caption leaves it be.
+      const isAway = event.x !== press.x || event.y !== press.y
+      press.hasMoved = press.hasMoved || (press.button === 'left' && isAway)
+      const aim = aimOf(event, live)
+      const sent = `${aim.fromRight}:${aim.up}`
+      if (!press.hasMoved || sent === live.sent) return
+      live.sent = sent
+      surface.post({ kind: 'aim', ...aim })
     })
 
     surface.setState({ live })
   } else {
-    surface.state.live.offset = props.offset
     surface.state.live.columns = surface.columns
   }
 
   return (
-    <Box paddingRight={props.offset.right}>
+    <Box paddingRight={props.pad}>
       <Text dimColor>
         <Text color="claude" weight="bold">
           {props.name}
-        </Text>{' '}
-        {props.status}
+        </Text>
+        {props.badge === '' ? '' : ` ${props.badge}`} {props.status}
       </Text>
     </Box>
   )

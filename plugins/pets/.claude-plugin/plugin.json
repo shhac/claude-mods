@@ -1,7 +1,7 @@
 {
   "name": "pets",
-  "version": "0.1.0",
-  "description": "A Codex-compatible pet above the prompt that reacts to what Claude is doing",
+  "version": "0.2.0",
+  "description": "A Codex-compatible pet that floats over the conversation, reacts to what Claude is doing, chats a little and grows as you work",
   "author": {
     "name": "Paul Somers"
   },
@@ -9,20 +9,36 @@
   "types": "./types/index.d.ts",
   "userConfig": {
     "size": {
-      "type": "number",
+      "type": "string",
       "title": "Pet size",
-      "description": "How many terminal rows tall the pet is drawn (2-16)",
-      "default": 4
+      "description": "How big the pet starts: small (3 rows), medium (4) or large (6). Right-click the pet to cycle.",
+      "options": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "default": "medium"
     },
     "placement": {
       "type": "string",
       "title": "Pet placement",
-      "description": "float: right of the prompt, over its right end (fullscreen). band: in its own rows above the prompt.",
+      "description": "float: over the conversation or the prompt box (fullscreen). band: in its own rows above the prompt.",
       "options": [
         "float",
         "band"
       ],
       "default": "float"
+    },
+    "chatter": {
+      "type": "string",
+      "title": "Pet chatter",
+      "description": "on: a speech bubble about what Claude is doing, and a remark on each reply (asks Haiku). quiet: tool lines only, no model calls. off: no bubble.",
+      "options": [
+        "on",
+        "quiet",
+        "off"
+      ],
+      "default": "on"
     }
   }
 }
