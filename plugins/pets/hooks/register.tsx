@@ -1,12 +1,12 @@
 import { atom, read } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Activity, SizeName } from '../types'
+import type { Activity, Dock, SizeName } from '../types'
 import { settleIn } from './adoption'
 import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
 import { afterTool, afterTurn } from './care'
 import { petCommand } from './commands'
-import { aimPet, click, dragPet, isSizeName, mirror, resetControls, sizeOf } from './controls'
+import { aimPet, click, dragPet, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithPet } from './drawings'
 import type { Look } from './drawings'
@@ -33,6 +33,13 @@ const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
 const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
+const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
+
+// What the pet does, shown while the pointer is over it or its name tag.
+const HINTS: Record<Dock, string> = {
+  conversation: 'drag to move · double-click to dock · right-click to resize',
+  prompt: 'drag or double-click to undock · right-click to resize',
+}
 
 const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch'])
 const ASKING_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode'])
@@ -61,6 +68,8 @@ async function petLook($: EngineInterface): Promise<Look | undefined> {
 }
 
 async function statusLine($: EngineInterface) {
+  if (await read($, isHovered)) return HINTS[await read($, dock)]
+
   const shownReaction = await read($, reaction)
   if (shownReaction !== null) return REACTION_LABEL[shownReaction]
 
@@ -250,7 +259,9 @@ export const register: Register = (on, options) => {
       }
 
       const said = isHost ? await read($, bubble) : null
-      return rowWithPet($.ui.resolve(e), row, { plan, isHost, look, petSize, said, catcher, screenColumns: screen.columns })
+      const isLit = isHost && (await read($, isHovered))
+      const share = { plan, isHost, isLit, look, petSize, said, catcher, screenColumns: screen.columns }
+      return rowWithPet($.ui.resolve(e), row, share)
     },
   )
 
@@ -281,13 +292,14 @@ export const register: Register = (on, options) => {
       playback.framesDir = look.framesDir
     }
 
-    return footerWithPet($.ui.resolve(e), await next(e), grip, isDocked ? { top: PROMPT_DOCK_TOP, look, petSize } : undefined)
+    return footerWithPet($.ui.resolve(e), await next(e), grip, isDocked ? { top: PROMPT_DOCK_TOP, look, petSize, isLit: await read($, isHovered) } : undefined)
   })
 
   // The pet's catcher: a drag moves it, a click pets it, a double click docks
   // it on the prompt or back, a right click changes its size.
   on('ui.message', { element: 'handle' }, async ($, e) => {
     const kind = fieldOf(e.data, 'kind')
+    if (kind === 'hover') await hover($, `${e.requestId}:handle`, fieldOf(e.data, 'isOver') === true)
     if (kind === 'click') await click($, fieldOf(e.data, 'button'), true)
     if (kind !== 'drag' && kind !== 'drop') return {}
 
@@ -300,6 +312,7 @@ export const register: Register = (on, options) => {
   // The footer caption: the same, but dragged, the pet follows the pointer.
   on('ui.message', { element: 'grip' }, async ($, e) => {
     const kind = fieldOf(e.data, 'kind')
+    if (kind === 'hover') await hover($, `${e.requestId}:grip`, fieldOf(e.data, 'isOver') === true)
     if (kind === 'click') await click($, fieldOf(e.data, 'button'), false)
     if (kind !== 'aim' && kind !== 'drop') return {}
 

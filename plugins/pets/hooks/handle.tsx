@@ -19,6 +19,13 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
     const live: Live = { press: undefined, gesture: 0, sent: '' }
 
     surface.onPointer(event => {
+      // The pointer can't change shape, so the pet lights up instead. A drag
+      // holds the pointer and may leave the region; the drop puts it out.
+      if ((event.type === 'enter' || event.type === 'leave') && live.press === undefined) {
+        surface.post({ kind: 'hover', isOver: event.type === 'enter' })
+        return
+      }
+
       // Only a left press drags, so any other button is a click straight
       // away: over the conversation, a right button's release can go astray.
       if (event.type === 'down' && event.button !== undefined && event.button !== 'left') {

@@ -21,6 +21,7 @@ const DRAG_TIMEOUT_MS = 1500
 const offset = atom({ plugin: 'pets', key: 'offset' } as const, HOME_OFFSET)
 const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
 const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
+const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 const SIZE_NAMES = new Set<string>(['small', 'medium', 'large'])
 
@@ -59,6 +60,9 @@ export const mirror: {
   catchers: Map<string, Catcher>
   drag: Drag | undefined
   lastClickAt: number
+  // Which catchers the pointer is over: moving from one row's to the next can
+  // tell of the new one first.
+  hovering: Set<string>
 } = {
   offset: HOME_OFFSET,
   size: 'medium',
@@ -67,6 +71,7 @@ export const mirror: {
   catchers: new Map(),
   drag: undefined,
   lastClickAt: Number.NEGATIVE_INFINITY,
+  hovering: new Set(),
 }
 
 // A load starts the module's own state over; the session's state and the
@@ -80,6 +85,7 @@ export function resetControls(defaultSize: SizeName) {
   mirror.catchers.clear()
   mirror.drag = undefined
   mirror.lastClickAt = Number.NEGATIVE_INFINITY
+  mirror.hovering.clear()
 }
 
 export async function restoreControls($: EngineInterface, defaultSize: SizeName) {
@@ -120,10 +126,25 @@ export async function goHome($: EngineInterface) {
   if (mirror.dock !== 'conversation') await setDock($, 'conversation')
 }
 
-function endDrag($: EngineInterface) {
+async function lightUp($: EngineInterface) {
+  const isLit = mirror.hovering.size > 0
+  if ((await read($, isHovered)) !== isLit) await update($, isHovered, () => isLit)
+}
+
+// The pointer came over a catcher or the name tag, or left it.
+export async function hover($: EngineInterface, catcher: string, isOver: boolean) {
+  if (isOver) mirror.hovering.add(catcher)
+  else mirror.hovering.delete(catcher)
+  await lightUp($)
+}
+
+// A drop moves the catchers from under the pointer, so none tells it left.
+async function endDrag($: EngineInterface) {
   mirror.drag?.watchdog?.cancel()
   mirror.drag = undefined
+  mirror.hovering.clear()
   steer($, undefined)
+  await lightUp($)
   $.ui.invalidate('ui.render')
 }
 
@@ -131,7 +152,7 @@ function endDrag($: EngineInterface) {
 function guardDrag($: EngineInterface, drag: Drag) {
   drag.watchdog?.cancel()
   drag.watchdog = $.clock.after(DRAG_TIMEOUT_MS, () => {
-    if (mirror.drag === drag) endDrag($)
+    if (mirror.drag === drag) void endDrag($)
   })
 }
 
@@ -143,7 +164,7 @@ async function moveTo($: EngineInterface, drag: Drag, wanted: Offset, isDrop: bo
 
   if (isDrop) {
     await $.store.set('offset', at)
-    endDrag($)
+    await endDrag($)
     return
   }
 

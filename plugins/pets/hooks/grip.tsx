@@ -30,6 +30,13 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
     const live: Live = { columns: surface.columns, press: undefined, sent: '' }
 
     surface.onPointer(event => {
+      // The pointer can't change shape, so the pet lights up instead. A drag
+      // holds the pointer and may leave the region; the drop puts it out.
+      if ((event.type === 'enter' || event.type === 'leave') && live.press === undefined) {
+        surface.post({ kind: 'hover', isOver: event.type === 'enter' })
+        return
+      }
+
       // As on the pet's catcher, any button but the left is a click at once.
       if (event.type === 'down' && event.button !== undefined && event.button !== 'left') {
         live.press = undefined

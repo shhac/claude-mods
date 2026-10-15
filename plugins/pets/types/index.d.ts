@@ -42,6 +42,8 @@ declare module 'claude-code' {
       dock: Dock
       // The bubble, while it shows.
       bubble: Bubble | null
+      // The pointer is over the pet or its name tag: both light up.
+      isHovered: boolean
       // Level and mood hearts, as the caption shows them.
       badge: string
     }

@@ -272,6 +272,24 @@ describe('the pet band', () => {
     expect(docked?.props).toMatchObject({ top: -3, right: 1 })
   })
 
+  test('the pointer over the pet lights it up and says what it can do', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const footer = await $.ui.mount(FOOTER)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const frame = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.borderStyle === 'round')
+
+    expect(await frame()).toBeUndefined()
+
+    await host.pointer({ type: 'enter', x: 1, y: 1 })
+    expect((await frame())?.props).toMatchObject({ position: 'absolute', top: 34 - 1, right: -1 })
+    expect(await footer.find({ type: 'Text', text: /drag to move/, in: 'grip' })).toBeDefined()
+
+    await host.pointer({ type: 'leave', x: 1, y: 1 })
+    expect(await frame()).toBeUndefined()
+  })
+
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {
     codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })

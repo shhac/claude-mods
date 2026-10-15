@@ -29,6 +29,20 @@ const picture = ({ Box, Image }: Terminal, look: Look, petSize: Size) => (
   </Box>
 )
 
+// A frame one cell outside the pet while the pointer is over it, drawn
+// before the picture: the pointer can't change shape to show what it can grab.
+const frame = ({ Box }: Terminal, petSize: Size, top: number, right: number) => (
+  <Box
+    position="absolute"
+    top={top - 1}
+    right={right - 1}
+    width={petSize.columns + 2}
+    height={petSize.rows + 2}
+    borderStyle="round"
+    borderColor="claude"
+  />
+)
+
 // Invisible, over the pet; it goes last so the pointer finds it.
 const catcherOver = ({ Client }: Terminal, columns: number, rows: number) => (
   <Client
@@ -123,6 +137,7 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
 export type RowShare = {
   plan: Plan
   isHost: boolean
+  isLit: boolean
   look: Look
   petSize: Size
   said: Bubble | null
@@ -145,6 +160,7 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
   return (
     <Box flexDirection="column">
       {row}
+      {share.isLit ? frame(elements, petSize, plan.top, plan.at.right) : null}
       {share.isHost ? (
         <Box position="absolute" top={plan.top} right={plan.at.right}>
           {picture(elements, share.look, petSize)}
@@ -164,7 +180,7 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
   )
 }
 
-export type Docked = { top: number; look: Look; petSize: Size }
+export type Docked = { top: number; look: Look; petSize: Size; isLit: boolean }
 
 // The footer: the engine's modes and any other mod's keep their place left of
 // the caption; docked on the prompt, the picture hangs from here over the
@@ -176,6 +192,7 @@ export function footerWithPet(elements: Terminal, below: RenderElement, grip: Gr
     <Box flexDirection="row" gap={1}>
       {below}
       <Client key="grip" module="./grip.tsx" props={grip} />
+      {docked?.isLit === true ? frame(elements, docked.petSize, docked.top, 1) : null}
       {docked === undefined ? null : (
         <Box position="absolute" top={docked.top} right={1}>
           {picture(elements, docked.look, docked.petSize)}
