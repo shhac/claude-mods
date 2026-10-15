@@ -293,7 +293,8 @@ type DockCatcher = { top: number; petSize: Size; isOutlined: boolean }
 // The footer: the engine's modes and any other mod's keep their place left of
 // the caption; docked on the prompt, the picture hangs from here over the
 // right end of the prompt box. As on a host row, the footer's box is
-// stretched up over the docked pet so the pointer reaches its catcher.
+// stretched over the docked pet (above the footer row, and below it for a
+// large one) so the pointer reaches its catcher.
 export function footerWithPet(
   elements: Terminal,
   below: RenderElement,
@@ -302,26 +303,26 @@ export function footerWithPet(
   catcher: DockCatcher | undefined,
 ) {
   const { Box, Client } = elements
-  const reach = catcher === undefined ? 0 : Math.max(0, -catcher.top)
-
-  return (
-    <Box flexDirection="column" marginTop={-reach}>
-      <Box height={reach} />
-      <Box flexDirection="row" gap={1}>
-        {below}
-        <Client key="grip" module="./grip.tsx" props={grip} />
-        {docked?.isLit === true ? frame(elements, docked.petSize, docked.top, 1) : null}
-        {docked === undefined ? null : (
-          <Box position="absolute" top={docked.top} right={1}>
-            {picture(elements, docked.look, docked.petSize)}
-          </Box>
-        )}
-      </Box>
-      {catcher === undefined ? null : (
-        <Box key="catcher" position="absolute" top={catcher.top + reach} right={1}>
-          {catcherOver(elements, catcher.petSize.columns, catcher.petSize.rows, catcher.isOutlined)}
+  const row = (
+    <Box flexDirection="row" gap={1}>
+      {below}
+      <Client key="grip" module="./grip.tsx" props={grip} />
+      {docked?.isLit === true ? frame(elements, docked.petSize, docked.top, 1) : null}
+      {docked === undefined ? null : (
+        <Box position="absolute" top={docked.top} right={1}>
+          {picture(elements, docked.look, docked.petSize)}
         </Box>
       )}
     </Box>
   )
+  // Always wrapped, catcher or not: a caption that moved in the tree would
+  // be a new one, and lose the pointer in the middle of a drag.
+  const spans = catcher === undefined ? [] : [{ top: catcher.top, rows: catcher.petSize.rows }]
+  return stretched(elements, row, 1, spans, shift => [
+    catcher === undefined ? null : (
+      <Box key="catcher" position="absolute" top={catcher.top + shift} right={1}>
+        {catcherOver(elements, catcher.petSize.columns, catcher.petSize.rows, catcher.isOutlined)}
+      </Box>
+    ),
+  ])
 }
