@@ -102,9 +102,11 @@ A second Claude Code window (`claude --plugin-dir`) can be read with `cmux read-
 
 ## Grabbing the pet
 
-The picture hangs whole from the bottom-most row, which redraws on every scroll, so it never tears. The pointer can't reach it there, outside its row's own box. So every row the pet overlaps also lays an invisible `Client` catcher over its own share of the pet, inside its own box (`stage.ts` works out the shares from the rows' `onScreen` reports, in the order they arrived).
+The picture hangs whole from the bottom-most row, which redraws on every scroll, so it never tears. The pointer only reaches a floating `Client` inside its parent's box, and the pet mostly hangs above that row's box.
 
-- A drag holds its catcher still until the drop, so the pointer's place in the region stays a place on screen and the capture survives the pet moving away from that row.
+- **One catcher per overlapped row didn't line up.** Each row laid a catcher over its own share of the pet, placed by adding up the rows' heights. A row no hook sees (a `pets: reloaded` notice) between two hooked rows shifted every share above it: `/pet debug` showed the dots for the rows above the notice a few lines off the picture.
+- **What works: stretch the host row's box over the pet.** An empty spacer as tall as the pet reaches above the row, with a negative `marginTop` of the same size, so the row's box covers the pet and every row stays where it was. The catcher, inside that box, lines up with the picture exactly, notices or not (measured with `/pet debug`'s dots). A spacer and negative `marginBottom` do the same below the row.
+- A drag holds the catcher still until the drop, so the pointer's place in the region stays a place on screen and the capture survives the pet moving.
 - Every post carries the whole way from the press: a later post in the same frame replaces an undelivered one.
 - A drag whose release never comes (its row went away) ends after 1.5 s.
-- Middle rows don't redraw on scroll, so a catcher can lag a row behind until the next redraw; only grabbing is affected, not the picture.
+- A resting pointer gets no `leave` when what's under it moves, so typing puts the hover light out, and the host only lights the frame for the plan it was lit for.

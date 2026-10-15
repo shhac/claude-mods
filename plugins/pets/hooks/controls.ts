@@ -38,7 +38,8 @@ export const isDock = (value: unknown): value is Dock => value === 'conversation
 
 export const sizeOf = (name: SizeName): Size => ({ rows: SIZE_ROWS[name], columns: columnsForRows(SIZE_ROWS[name]) })
 
-// Where a row last drew its catcher, so a drag can hold it there.
+// Where the host row last drew the catcher, in its own lines, so a drag can
+// hold it there.
 export type Catcher = { top: number; right: number; height: number }
 
 type Drag = {
@@ -57,24 +58,24 @@ export const mirror: {
   size: SizeName
   dock: Dock
   planKey: string
-  catchers: Map<string, Catcher>
+  catcher: { requestId: string; at: Catcher } | undefined
   drag: Drag | undefined
   lastClickAt: number
-  // Which catchers the pointer is over: moving from one row's to the next can
-  // tell of the new one first.
+  // Which catchers the pointer is over, the pet's or the name tag's: moving
+  // from one to another can tell of the new one first.
   hovering: Set<string>
-  // Draws the catchers, so where the pet can be grabbed shows.
+  // Draws the catcher, so where the pet can be grabbed shows.
   isDebug: boolean
   // The frame just went out: drawn blank a moment, as the bubble is.
   isFrameFading: boolean
-  // Where the catchers were when the pointer came over one.
+  // Where the catcher was when the pointer came over it.
   hoverKey: string
 } = {
   offset: HOME_OFFSET,
   size: 'medium',
   dock: 'conversation',
   planKey: '',
-  catchers: new Map(),
+  catcher: undefined,
   drag: undefined,
   lastClickAt: Number.NEGATIVE_INFINITY,
   hovering: new Set(),
@@ -91,7 +92,7 @@ export function resetControls(defaultSize: SizeName) {
   mirror.size = defaultSize
   mirror.dock = 'conversation'
   mirror.planKey = ''
-  mirror.catchers.clear()
+  mirror.catcher = undefined
   mirror.drag = undefined
   mirror.lastClickAt = Number.NEGATIVE_INFINITY
   mirror.hovering.clear()
@@ -162,8 +163,8 @@ function fadeOut($: EngineInterface) {
 }
 
 // Typing can take the pet from under a resting pointer, and no catcher
-// tells it left. Moved catchers are caught by the rows, which check the
-// plan the light was lit for.
+// tells it left. A moved catcher is caught by the host row, which checks
+// the plan the light was lit for.
 export async function forgetHover($: EngineInterface) {
   if (mirror.hovering.size === 0) return
   mirror.hovering.clear()
@@ -178,7 +179,7 @@ export async function hover($: EngineInterface, catcher: string, isOver: boolean
   await lightUp($)
 }
 
-// A drop moves the catchers from under the pointer, so none tells it left.
+// A drop moves the catcher from under the pointer, so it never tells it left.
 async function endDrag($: EngineInterface) {
   mirror.drag?.watchdog?.cancel()
   mirror.drag = undefined
@@ -213,13 +214,15 @@ async function moveTo($: EngineInterface, drag: Drag, wanted: Offset, isDrop: bo
   if (at.right !== was.right) steer($, at.right < was.right ? 'right' : 'left')
 }
 
+const heldBy = (requestId: string) => (mirror.catcher?.requestId === requestId ? mirror.catcher.at : undefined)
+
 // The pet dragged by its catcher: `dx`, `dy` are the whole way from the press.
 export async function dragPet($: EngineInterface, requestId: string, gesture: string, move: { dx: number; dy: number }, isDrop: boolean) {
   const current = mirror.drag
   const drag: Drag =
     current !== undefined && current.gesture === gesture
       ? current
-      : { gesture, requestId, from: mirror.offset, catcher: mirror.catchers.get(requestId), watchdog: undefined }
+      : { gesture, requestId, from: mirror.offset, catcher: heldBy(requestId), watchdog: undefined }
   mirror.drag = drag
 
   await moveTo($, drag, { right: drag.from.right - move.dx, lift: drag.from.lift - move.dy }, isDrop)

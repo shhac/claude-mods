@@ -220,6 +220,29 @@ describe('the pet band', () => {
     expect((await boxes())[0]?.props).toMatchObject({ right: 0, top: 34 })
   })
 
+  test("the host row's box stretches up over the pet, so its catcher can be reached", async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const reply = conversationRow('reply', 5)
+    await $.ui.mount({ ...reply, props: { ...reply.props, onScreen: { first: 5, last: 44, of: 45 } } })
+    const took = await $.ui.mount({
+      plugin: 'pets',
+      surface: 'terminal',
+      component: 'TurnDuration',
+      requestId: 'took',
+      props: { word: 'Baked', durationMs: 3000, onScreen: { first: 0, last: 1, of: 2 } },
+    })
+    const boxes = async () => (await took.findAll({ type: 'Box' })).filter(box => box.props.position === 'absolute')
+
+    // At home the pet's 4 rows end on the 2-row line: 2 rows above its box.
+    expect((await took.findAll({ type: 'Box' }))[0]?.props).toMatchObject({ marginTop: -2, marginBottom: -0 })
+    expect((await boxes()).map(box => box.props)).toMatchObject([
+      { right: 0, top: 0 },
+      { right: 0, top: 0 },
+    ])
+  })
+
   test('the footer caption drags the pet down as well as up, and a click leaves it be', async ($, on) => {
     codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })

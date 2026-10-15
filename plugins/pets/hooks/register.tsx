@@ -209,9 +209,9 @@ export const register: Register = (on, options) => {
     )
   })
 
-  // Floating over the conversation, the pet is drawn by the rows: the picture
-  // whole from the bottom-most row, and over it, in each row it overlaps, an
-  // invisible catcher the pointer can reach (stage.ts says why).
+  // Floating over the conversation, the pet is drawn by the bottom-most row,
+  // its box stretched over the pet so the pointer reaches the catcher on it
+  // (stage.ts says why). Every row reports where it is.
   on(
     'ui.render',
     {
@@ -239,38 +239,32 @@ export const register: Register = (on, options) => {
       const plan = planFor(mirror.offset, petSize)
       if (plan === undefined) return next(e)
 
-      // Another row's share may have changed with this one's report.
+      // The host may have changed with this row's report.
       if (plan.key !== mirror.planKey) {
         mirror.planKey = plan.key
         $.ui.invalidate('ui.render')
       }
+      if (plan.host !== e.requestId) return next(e)
 
-      // A drag holds its catcher where it was pressed until the drop.
-      const isHost = plan.host === e.requestId
+      // A drag holds the catcher where it was pressed until the drop.
       const held = mirror.drag?.requestId === e.requestId ? mirror.drag.catcher : undefined
-      const strip = plan.catchers.get(e.requestId)
-      const catcher: Catcher | undefined =
-        held ?? (strip === undefined ? undefined : { top: strip.top, right: plan.at.right, height: strip.height })
-      if (catcher === undefined) mirror.catchers.delete(e.requestId)
-      else mirror.catchers.set(e.requestId, catcher)
-      if (!isHost && catcher === undefined) return next(e)
+      const catcher: Catcher = held ?? { top: plan.top, right: plan.at.right, height: petSize.rows }
+      mirror.catcher = { requestId: e.requestId, at: catcher }
 
       const row = await next(e)
 
-      // Only the row holding the picture follows the pet's every change.
-      if (isHost) {
-        await read($, offset)
-        await read($, size)
-        playback.siteRequestId = e.requestId
-        playback.framesDir = look.framesDir
-      }
+      // The host row follows the pet's every change.
+      await read($, offset)
+      await read($, size)
+      playback.siteRequestId = e.requestId
+      playback.framesDir = look.framesDir
 
-      const said = isHost ? await read($, bubble) : null
+      const said = await read($, bubble)
       // No frame while dragging: a moving floating box can leave its old cells.
-      // Nor once the catchers moved: the pointer may no longer be over the pet.
-      const isLit = isHost && (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
-      const isFading = isHost && !isLit && mirror.isFrameFading
-      const share = { plan, isHost, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, catcher, screenColumns: screen.columns }
+      // Nor once the catcher moved: the pointer may no longer be over the pet.
+      const isLit = (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
+      const isFading = !isLit && mirror.isFrameFading
+      const share = { plan, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, catcher, screenColumns: screen.columns }
       return rowWithPet($.ui.resolve(e), row, share)
     },
   )

@@ -3,26 +3,22 @@ import type { Offset } from '../types'
 // The floating pet is drawn over the conversation from the bottom-most row:
 // a floating box paints over the rows before it but under every row after, so
 // only the last row leaves the picture whole, and it redraws on every scroll.
-// The pointer, though, only reaches a floating box inside its own row, so each
-// row the pet overlaps lays an invisible catcher over its share of the pet.
-// This module works out where the rows are, the pet's place on the bottom row
-// and which row catches which lines.
+// The pointer only reaches a floating box inside its parent's box, so that
+// row's box is stretched over the pet too (drawings.tsx). This module works
+// out where the rows are and the pet's place on the bottom row.
 
 export type OnScreen = { first: number; last: number; of: number }
 export type Size = { rows: number; columns: number }
 
 type Seen = OnScreen & { order: number }
 
-// A row's share of the pet: `top` is where it starts in the row's own lines,
-// `skip` how many of the pet's lines lie above it.
-export type Strip = { top: number; height: number; skip: number }
-
 export type Plan = {
   at: Offset
-  // The row the picture hangs from, and the picture's top in its own lines.
+  // The row the picture hangs from, the picture's top in its own lines, and
+  // how many lines it has.
   host: string
   top: number
-  catchers: ReadonlyMap<string, Strip>
+  hostLines: number
   key: string
 }
 
@@ -155,31 +151,7 @@ function belowOf(rows: readonly Placed[] | undefined) {
 
 export const belowRows = () => belowOf(layout())
 
-// Where the pet's lines `[lift, lift + rows)`, counted up from the content's
-// bottom, cross each row's own lines.
-export function stripsFor(rows: readonly Placed[], at: Offset, size: Size) {
-  const strips = new Map<string, Strip>()
-
-  for (const row of rows) {
-    const low = Math.max(at.lift, row.fromBottom)
-    const high = Math.min(at.lift + size.rows, row.fromBottom + row.lines)
-    if (low >= high) continue
-
-    strips.set(row.requestId, {
-      top: row.seen.last - (high - 1 - row.fromBottom),
-      height: high - low,
-      skip: at.lift + size.rows - high,
-    })
-  }
-
-  return strips
-}
-
-const keyOf = (plan: Omit<Plan, 'key'>) =>
-  [
-    `${plan.host}:${plan.top}:${plan.at.right}`,
-    ...[...plan.catchers].map(([id, s]) => `${id}:${s.top}:${s.height}:${s.skip}`),
-  ].join('|')
+const keyOf = (plan: Omit<Plan, 'key'>) => `${plan.host}:${plan.top}:${plan.at.right}:${plan.hostLines}`
 
 // The bottom-most row: one cut at the bottom, else the newest on screen.
 function bottomRow(): Placed | undefined {
@@ -189,8 +161,8 @@ function bottomRow(): Placed | undefined {
   return requestId === undefined || seen === undefined ? undefined : { requestId, seen, fromBottom: 0, lines: linesOf(seen) }
 }
 
-// When the rows don't add up, only the bottom row is placed for sure: it holds
-// the picture, and catches whatever of the pet lies on its own lines.
+// When the rows don't add up, the bottom row is still the host, held to the
+// conversation's height.
 export function planFor(wanted: Offset, size: Size): Plan | undefined {
   const rows = layout()
   const host = rows?.[0] ?? bottomRow()
@@ -202,7 +174,7 @@ export function planFor(wanted: Offset, size: Size): Plan | undefined {
     at,
     host: host.requestId,
     top: host.seen.last - at.lift - size.rows + 1,
-    catchers: stripsFor(rows ?? [host], at, size),
+    hostLines: host.seen.of,
   }
 
   return { ...plan, key: keyOf(plan) }

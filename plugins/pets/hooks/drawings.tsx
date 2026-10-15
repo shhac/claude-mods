@@ -157,23 +157,27 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
 
 export type RowShare = {
   plan: Plan
-  isHost: boolean
   isLit: boolean
   isFading: boolean
   isDebug: boolean
   look: Look
   petSize: Size
   said: Bubble | null
-  catcher: Catcher | undefined
+  catcher: Catcher
   screenColumns: number
 }
 
-// A conversation row with its share of the floating pet: the host row hangs
-// the picture and the speech bubble; any row the pet overlaps lays a catcher.
+// The host row with the floating pet: the picture, the bubble and over them
+// the catcher. The pointer reaches a floating box only inside its parent's
+// box, so the row's box is stretched up (or down) over the catcher by an empty
+// spacer, and a negative margin of the same size keeps every row in its place.
 export function rowWithPet(elements: Terminal, row: RenderElement, share: RowShare) {
   const { Box } = elements
-  const { plan, petSize, catcher } = share
-  const { said } = share
+  const { plan, petSize, catcher, said } = share
+
+  const reach = Math.max(0, -catcher.top)
+  const drop = Math.max(0, catcher.top + catcher.height - plan.hostLines)
+  const top = plan.top + reach
 
   // The bubble goes left of the pet, or right where the screen runs out.
   const bubbleColumns = said === null ? 0 : shapeOf(said).columns
@@ -181,25 +185,23 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
   const bubbleRight = isLeftOfPet ? plan.at.right + petSize.columns : Math.max(0, plan.at.right - bubbleColumns)
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" marginTop={-reach} marginBottom={-drop}>
+      <Box height={reach} />
       {row}
-      {share.isLit ? frame(elements, petSize, plan.top, plan.at.right) : null}
-      {share.isFading ? blankFrame(elements, petSize, plan.top, plan.at.right) : null}
-      {share.isHost ? (
-        <Box position="absolute" top={plan.top} right={plan.at.right}>
-          {picture(elements, share.look, petSize)}
-        </Box>
-      ) : null}
-      {share.isHost && said !== null ? (
-        <Box position="absolute" top={plan.top} right={bubbleRight}>
+      <Box height={drop} />
+      {share.isLit ? frame(elements, petSize, top, plan.at.right) : null}
+      {share.isFading ? blankFrame(elements, petSize, top, plan.at.right) : null}
+      <Box position="absolute" top={top} right={plan.at.right}>
+        {picture(elements, share.look, petSize)}
+      </Box>
+      {said === null ? null : (
+        <Box position="absolute" top={top} right={bubbleRight}>
           {bubbleBox(elements, said, isLeftOfPet)}
         </Box>
-      ) : null}
-      {catcher === undefined ? null : (
-        <Box position="absolute" top={catcher.top} right={catcher.right}>
-          {catcherOver(elements, petSize.columns, catcher.height, share.isDebug)}
-        </Box>
       )}
+      <Box key="catcher" position="absolute" top={catcher.top + reach} right={catcher.right}>
+        {catcherOver(elements, petSize.columns, catcher.height, share.isDebug)}
+      </Box>
     </Box>
   )
 }
