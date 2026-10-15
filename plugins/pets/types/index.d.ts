@@ -15,6 +15,9 @@ export type SizeName = 'small' | 'medium' | 'large'
 // of the prompt box.
 export type Dock = 'conversation' | 'prompt'
 
+// The right-click menu: shut, showing, or drawn blank a moment as it goes.
+export type MenuState = 'closed' | 'open' | 'fading'
+
 // Said aloud, or only thought (Claude is quiet, the pet's mind wanders).
 export type BubbleKind = 'say' | 'think'
 

@@ -19,6 +19,8 @@ export type Plan = {
   host: string
   top: number
   hostLines: number
+  // Lines of the conversation above the pet's top, as far as we know.
+  above: number
   key: string
 }
 
@@ -175,6 +177,7 @@ export function planFor(wanted: Offset, size: Size): Plan | undefined {
     host: host.requestId,
     top: host.seen.last - at.lift - size.rows + 1,
     hostLines: host.seen.of,
+    above: Math.max(0, lines - at.lift - size.rows),
   }
 
   return { ...plan, key: keyOf(plan) }

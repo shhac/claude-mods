@@ -21,7 +21,8 @@ function codexHome(on: On) {
 
   mock.env(on, { HOME })
   mock.store(on)
-  const clock = mock.clock(on)
+  // A real-looking now: a fresh pet's first treat isn't half an hour after 1970.
+  const clock = mock.clock(on, { now: Date.UTC(2026, 9, 15, 12) })
 
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
@@ -277,7 +278,7 @@ describe('the pet band', () => {
     expect((await picture())?.props).toMatchObject({ top: 37 - 2 - 3 })
   })
 
-  test('a click pets it, a right click resizes it, a double click docks it on the prompt', async ($, on) => {
+  test('a click pets it, a right click opens its menu, a double click docks it on the prompt', async ($, on) => {
     const { clock } = codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
     await $.ui.mount(FLOATING_BAND)
@@ -291,9 +292,15 @@ describe('the pet band', () => {
     await click('left')
     expect((await $.command.run(pet('stats'))).text).toContain('petted 1×')
 
-    // A right press is a click at once; its release may never come.
+    // A right press opens the menu at once; its release may never come.
     await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
+    expect(await host.find({ type: 'Text', text: /Sit on the prompt/, in: 'menu' })).toBeDefined()
+
+    // The size row: " Size small medium large", inside the border.
+    await host.pointer({ type: 'down', x: 20, y: 3, button: 'left', in: 'menu' })
     expect((await host.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
+    await clock.advance(1000)
+    expect(await host.find({ key: 'menu' })).toBeUndefined()
 
     await clock.advance(2000)
     await click('left')
@@ -352,6 +359,43 @@ describe('the pet band', () => {
     const newer = await $.ui.mount(conversationRow('row-2', 0))
     expect((await newer.findAll({ type: 'Box' })).find(box => box.props.borderStyle === 'round')).toBeUndefined()
     await clock.advance(1000)
+  })
+
+  test('the menu pats, feeds, closes when left, and opens above the prompt when docked', async ($, on) => {
+    const { clock } = codexHome(on)
+    on('ui.toast', () => ({ value: undefined }))
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const footer = await $.ui.mount(FOOTER)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const openMenu = async () => host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
+    const pick = async (row: number) => host.pointer({ type: 'down', x: 2, y: row, button: 'left', in: 'menu' })
+
+    await openMenu()
+    await pick(1)
+    await clock.advance(1000)
+    await openMenu()
+    await pick(2)
+    await clock.advance(1000)
+    const stats = (await $.command.run(pet('stats'))).text
+    expect(stats).toContain('petted 1×')
+    expect(stats).toContain('1 treats')
+
+    // Fed just now: the row says so and can't be picked.
+    await openMenu()
+    expect(await host.find({ type: 'Text', text: /Feed \(full for 30 min\)/, in: 'menu' })).toBeDefined()
+
+    // The pointer leaves: the menu goes soon after.
+    await host.pointer({ type: 'enter', x: 2, y: 1, in: 'menu' })
+    await host.pointer({ type: 'leave', x: 2, y: 1, in: 'menu' })
+    await clock.advance(2000)
+    expect(await host.find({ key: 'menu' })).toBeUndefined()
+
+    // Docked, a right click on the name tag opens it from the bottom row.
+    await $.command.run(pet('dock'))
+    await footer.pointer({ type: 'down', x: 0, y: 0, button: 'right', in: 'grip' })
+    expect(await host.find({ type: 'Text', text: /Back over the chat/, in: 'menu' })).toBeDefined()
+    await clock.advance(20000)
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {

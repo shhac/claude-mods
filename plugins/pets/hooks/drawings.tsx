@@ -2,6 +2,9 @@ import type { Elements, RenderElement } from 'claude-code'
 
 import type { Bubble, BubbleKind } from '../types'
 import { wrapBubble } from './chatter'
+import type { MenuProps } from './menu'
+import { menuSize } from './menu-rows'
+import type { MenuRow } from './menu-rows'
 
 import type { Catcher } from './controls'
 import type { GripProps } from './grip'
@@ -155,6 +158,71 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
   )
 }
 
+export type ShownMenu = { rows: readonly MenuRow[]; isFading: boolean }
+
+// The menu itself, or blank cells in its shape while it goes.
+function menuBox({ Box, Client, Text }: Terminal, menu: ShownMenu) {
+  const size = menuSize(menu.rows)
+  if (menu.isFading) {
+    return (
+      <Box flexDirection="column">
+        {Array.from({ length: size.rows }, (_, row) => (
+          <Text key={`blank-${row}`}>{' '.repeat(size.columns)}</Text>
+        ))}
+      </Box>
+    )
+  }
+
+  return (
+    <Client
+      key="menu"
+      module="./menu.tsx"
+      props={{ rows: menu.rows, columns: size.columns } satisfies MenuProps}
+      width={size.columns}
+      height={size.rows}
+    />
+  )
+}
+
+// Beside the pet, on the side with room, opening upward from the pet's
+// bottom when the conversation has room above, else downward from its top.
+function menuPlace(plan: Plan, petSize: Size, menu: ShownMenu, screenColumns: number) {
+  const size = menuSize(menu.rows)
+  const isLeft = screenColumns - plan.at.right - petSize.columns >= size.columns
+  const grows = Math.max(0, size.rows - petSize.rows)
+  return {
+    top: grows <= plan.above ? plan.top - grows : plan.top,
+    right: isLeft ? plan.at.right + petSize.columns : Math.max(0, plan.at.right - size.columns),
+    rows: size.rows,
+  }
+}
+
+// A row's box stretched up and down over `spans` (in the row's own lines),
+// by empty spacers with negative margins of the same size, so the pointer
+// reaches floating boxes there and every row stays in its place. The
+// children are placed with `top` counted from the row's first line. (A Box
+// holding the engine's row can't take a `width` or `alignSelf: stretch`: the
+// engine refuses the tree and draws its own row.)
+function stretched(
+  { Box }: Terminal,
+  row: RenderElement,
+  hostLines: number,
+  spans: readonly { top: number; rows: number }[],
+  children: (shift: number) => (RenderElement | null)[],
+) {
+  const reach = Math.max(0, ...spans.map(span => -span.top))
+  const drop = Math.max(0, ...spans.map(span => span.top + span.rows - hostLines))
+
+  return (
+    <Box flexDirection="column" marginTop={-reach} marginBottom={-drop}>
+      <Box height={reach} />
+      {row}
+      <Box height={drop} />
+      {children(reach)}
+    </Box>
+  )
+}
+
 export type RowShare = {
   plan: Plan
   isLit: boolean
@@ -163,47 +231,59 @@ export type RowShare = {
   look: Look
   petSize: Size
   said: Bubble | null
+  menu: ShownMenu | undefined
   catcher: Catcher
   screenColumns: number
 }
 
-// The host row with the floating pet: the picture, the bubble and over them
-// the catcher. The pointer reaches a floating box only inside its parent's
-// box, so the row's box is stretched up (or down) over the catcher by an empty
-// spacer, and a negative margin of the same size keeps every row in its place.
+// The host row with the floating pet: the picture, the bubble or the menu,
+// and over the picture the catcher, all where the pointer can reach them.
 export function rowWithPet(elements: Terminal, row: RenderElement, share: RowShare) {
   const { Box } = elements
-  const { plan, petSize, catcher, said } = share
-
-  const reach = Math.max(0, -catcher.top)
-  const drop = Math.max(0, catcher.top + catcher.height - plan.hostLines)
-  const top = plan.top + reach
+  const { plan, petSize, catcher, menu } = share
+  // The menu stands in for the bubble while it's up.
+  const said = menu === undefined ? share.said : null
 
   // The bubble goes left of the pet, or right where the screen runs out.
   const bubbleColumns = said === null ? 0 : shapeOf(said).columns
   const isLeftOfPet = share.screenColumns - plan.at.right - petSize.columns >= bubbleColumns
   const bubbleRight = isLeftOfPet ? plan.at.right + petSize.columns : Math.max(0, plan.at.right - bubbleColumns)
+  const placed = menu === undefined ? undefined : menuPlace(plan, petSize, menu, share.screenColumns)
 
-  return (
-    <Box flexDirection="column" marginTop={-reach} marginBottom={-drop}>
-      <Box height={reach} />
-      {row}
-      <Box height={drop} />
-      {share.isLit ? frame(elements, petSize, top, plan.at.right) : null}
-      {share.isFading ? blankFrame(elements, petSize, top, plan.at.right) : null}
-      <Box position="absolute" top={top} right={plan.at.right}>
-        {picture(elements, share.look, petSize)}
+  const spans = [{ top: catcher.top, rows: catcher.height }, ...(placed === undefined ? [] : [placed])]
+  return stretched(elements, row, plan.hostLines, spans, shift => [
+    share.isLit ? frame(elements, petSize, plan.top + shift, plan.at.right) : null,
+    share.isFading ? blankFrame(elements, petSize, plan.top + shift, plan.at.right) : null,
+    <Box key="picture" position="absolute" top={plan.top + shift} right={plan.at.right}>
+      {picture(elements, share.look, petSize)}
+    </Box>,
+    said === null ? null : (
+      <Box key="bubble" position="absolute" top={plan.top + shift} right={bubbleRight}>
+        {bubbleBox(elements, said, isLeftOfPet)}
       </Box>
-      {said === null ? null : (
-        <Box position="absolute" top={top} right={bubbleRight}>
-          {bubbleBox(elements, said, isLeftOfPet)}
-        </Box>
-      )}
-      <Box key="catcher" position="absolute" top={catcher.top + reach} right={catcher.right}>
-        {catcherOver(elements, petSize.columns, catcher.height, share.isDebug)}
+    ),
+    <Box key="catcher" position="absolute" top={catcher.top + shift} right={catcher.right}>
+      {catcherOver(elements, petSize.columns, catcher.height, share.isDebug)}
+    </Box>,
+    placed === undefined || menu === undefined ? null : (
+      <Box key="menu-place" position="absolute" top={placed.top + shift} right={placed.right}>
+        {menuBox(elements, menu)}
       </Box>
-    </Box>
-  )
+    ),
+  ])
+}
+
+// Docked on the prompt, the pet's menu opens from the conversation's bottom
+// row, at its right end, just above the pet: the footer can't reach that far.
+export function rowWithMenu(elements: Terminal, row: RenderElement, plan: Plan, menu: ShownMenu) {
+  const { Box } = elements
+  const place = { top: plan.top, rows: menuSize(menu.rows).rows }
+
+  return stretched(elements, row, plan.hostLines, [place], shift => [
+    <Box key="menu-place" position="absolute" top={plan.top + shift} right={plan.at.right}>
+      {menuBox(elements, menu)}
+    </Box>,
+  ])
 }
 
 export type Docked = { top: number; look: Look; petSize: Size; isLit: boolean }

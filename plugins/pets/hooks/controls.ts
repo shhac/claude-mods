@@ -250,9 +250,8 @@ export async function aimPet($: EngineInterface, requestId: string, aim: { fromR
 }
 
 // A click on the pet pets it, one on the caption doesn't; on either, a double
-// click docks the pet on the prompt or back, and a right click resizes it.
+// click docks the pet on the prompt or back. (A right click opens the menu.)
 export async function click($: EngineInterface, button: unknown, isOnPet: boolean) {
-  if (button === 'right') return setSize($, NEXT_SIZE[mirror.size])
   if (button !== 'left') return
 
   const now = await $.clock.now()

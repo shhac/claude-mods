@@ -16,7 +16,7 @@ const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
 const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 
-async function feedPet($: EngineInterface, name: string) {
+export async function feedPet($: EngineInterface, name: string) {
   const care = keeper.care
   if (care === undefined) return 'No pet to feed.'
 
@@ -27,6 +27,16 @@ async function feedPet($: EngineInterface, name: string) {
   await react($, 'happy')
   await say($, 'nom nom nom 🍪')
   return `${name} loved that.`
+}
+
+export async function patPet($: EngineInterface) {
+  await tend($, petted)
+  await react($, 'happy')
+}
+
+export async function hidePet($: EngineInterface, isOff = true) {
+  await update($, isHidden, () => isOff)
+  await $.store.set('isHidden', isOff)
 }
 
 async function switchPet($: EngineInterface, id: string) {
@@ -90,8 +100,7 @@ export async function petCommand($: EngineInterface, args: string) {
 
   if (['off', 'hide', 'on', 'show'].includes(arg)) {
     const isOff = arg === 'off' || arg === 'hide'
-    await update($, isHidden, () => isOff)
-    await $.store.set('isHidden', isOff)
+    await hidePet($, isOff)
     return isOff ? 'Pet hidden. /pet on brings it back.' : 'Pet is back.'
   }
 
@@ -106,8 +115,7 @@ export async function petCommand($: EngineInterface, args: string) {
   if (arg === 'feed' && current !== null) return feedPet($, current.displayName)
 
   if (arg === 'pat' && current !== null) {
-    await tend($, petted)
-    await react($, 'happy')
+    await patPet($)
     return `${current.displayName} wiggles happily.`
   }
 

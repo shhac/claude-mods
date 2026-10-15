@@ -8,10 +8,13 @@ import { afterTool, afterTurn } from './care'
 import { petCommand } from './commands'
 import { aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
 import type { Catcher } from './controls'
-import { bandFigure, footerWithPet, rowWithPet } from './drawings'
+import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
+import type { ShownMenu } from './drawings'
 import type { Look } from './drawings'
 import type { GripProps } from './grip'
 import { tend } from './keeper'
+import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
+import { menuSize } from './menu-rows'
 import { animate, playback, react, setActivity } from './player'
 import { describeStage, forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
 import { awaitThought, feelTool, hushStale, noteRequest, remark, stopMusing, voice } from './voice'
@@ -37,8 +40,8 @@ const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 // What the pet does, shown while the pointer is over it or its name tag.
 const HINTS: Record<Dock, string> = {
-  conversation: 'drag · 2-click: dock · right-click: size',
-  prompt: 'drag, 2-click: undock · right-click: size',
+  conversation: 'drag · 2-click: dock · right-click: menu',
+  prompt: 'drag, 2-click: undock · right-click: menu',
 }
 
 const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch'])
@@ -79,11 +82,21 @@ async function statusLine($: EngineInterface) {
   return tool === null ? label : `${label} · ${tool}`
 }
 
+const shownMenu = (): ShownMenu | undefined =>
+  menuMirror.state === 'closed' ? undefined : { rows: menuMirror.rows, isFading: menuMirror.state === 'fading' }
+
+// A right click on the pet or its name tag opens its menu; the rest are clicks.
+async function clickOrMenu($: EngineInterface, button: unknown, isOnPet: boolean) {
+  if (button === 'right') return toggleMenu($)
+  return click($, button, isOnPet)
+}
+
 export const register: Register = (on, options) => {
   const defaultSize: SizeName = isSizeName(options.size) ? options.size : 'medium'
   const isFloating = options.placement !== 'band'
   voice.chatter = asChatter(options.chatter)
   resetControls(defaultSize)
+  resetMenu()
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -118,6 +131,7 @@ export const register: Register = (on, options) => {
 
   on('prompt.edit', async ($, e, next) => {
     await forgetHover($)
+    await closeMenu($)
     return next(e)
   })
 
@@ -230,10 +244,17 @@ export const register: Register = (on, options) => {
       if (!isFloating || e.surface !== 'terminal') return next(e)
 
       noteRow(e.requestId, e.props.onScreen)
-      if (mirror.dock !== 'conversation') return next(e)
-
       const look = await petLook($)
       if (look === undefined) return next(e)
+
+      // Docked, the bottom row only opens the pet's menu, at the right end
+      // just above the prompt: the footer can't reach that far up.
+      if (mirror.dock !== 'conversation') {
+        const menu = shownMenu()
+        const menuPlan = menu === undefined ? undefined : planFor({ right: 1, lift: 0 }, menuSize(menu.rows))
+        if (menu === undefined || menuPlan?.host !== e.requestId) return next(e)
+        return rowWithMenu($.ui.resolve(e), await next(e), menuPlan, menu)
+      }
 
       const petSize = sizeOf(mirror.size)
       const plan = planFor(mirror.offset, petSize)
@@ -264,7 +285,8 @@ export const register: Register = (on, options) => {
       // Nor once the catcher moved: the pointer may no longer be over the pet.
       const isLit = (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
       const isFading = !isLit && mirror.isFrameFading
-      const share = { plan, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, catcher, screenColumns: screen.columns }
+      const menu = shownMenu()
+      const share = { plan, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, menu, catcher, screenColumns: screen.columns }
       return rowWithPet($.ui.resolve(e), row, share)
     },
   )
@@ -311,7 +333,7 @@ export const register: Register = (on, options) => {
   on('ui.message', { element: 'handle' }, async ($, e) => {
     const kind = fieldOf(e.data, 'kind')
     if (kind === 'hover') await hover($, `${e.requestId}:handle`, fieldOf(e.data, 'isOver') === true)
-    if (kind === 'click') await click($, fieldOf(e.data, 'button'), true)
+    if (kind === 'click') await clickOrMenu($, fieldOf(e.data, 'button'), true)
     if (kind !== 'drag' && kind !== 'drop') return {}
 
     // Docked, the catcher is the footer's: the pet follows the pointer, as
@@ -332,11 +354,20 @@ export const register: Register = (on, options) => {
     return {}
   })
 
+  // The right-click menu: a pick, or the pointer coming and going.
+  on('ui.message', { element: 'menu' }, async ($, e) => {
+    const kind = fieldOf(e.data, 'kind')
+    if (kind === 'hover') menuHover($, fieldOf(e.data, 'isOver') === true)
+    const id = fieldOf(e.data, 'id')
+    if (kind === 'pick' && typeof id === 'string') await pickFromMenu($, id)
+    return {}
+  })
+
   // The footer caption: the same, but dragged, the pet follows the pointer.
   on('ui.message', { element: 'grip' }, async ($, e) => {
     const kind = fieldOf(e.data, 'kind')
     if (kind === 'hover') await hover($, `${e.requestId}:grip`, fieldOf(e.data, 'isOver') === true)
-    if (kind === 'click') await click($, fieldOf(e.data, 'button'), false)
+    if (kind === 'click') await clickOrMenu($, fieldOf(e.data, 'button'), false)
     if (kind !== 'aim' && kind !== 'drop') return {}
 
     const aim = { fromRight: numberField(e.data, 'fromRight'), up: numberField(e.data, 'up') }
