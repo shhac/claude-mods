@@ -1,7 +1,7 @@
 import { atom, read } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Activity, SizeName } from '../types'
+import type { Activity, Dock, SizeName } from '../types'
 import { settleIn } from './adoption'
 import { afterTest, afterTool, afterTurn } from './care'
 import { isTestRun } from './checks'
@@ -9,7 +9,7 @@ import { petCommand } from './commands'
 import { SIDEBAR, aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
-import type { ShownMenu } from './drawings'
+import type { Look, RowShare, ShownMenu } from './drawings'
 import type { GripProps } from './grip'
 import { fieldOf } from './fields'
 import { tend } from './keeper'
@@ -18,8 +18,9 @@ import { menuSize } from './menu-rows'
 import { fetchGame } from './play'
 import { pressSidebar, sidebarView } from './side-panel'
 import { sidebar } from './sidebar'
-import { animate, playback, react, setActivity } from './player'
+import { animate, hostPicture, react, setActivity } from './player'
 import { forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
+import type { Plan, Size } from './stage'
 import { petLook, statusLine } from './status'
 import { awaitThought, feelTool, hushStale, noteRequest, remark, say, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
@@ -62,9 +63,71 @@ async function clickOrMenu($: EngineInterface, button: unknown, isOnPet: boolean
   return click($, button, isOnPet)
 }
 
+// How the person set the pet to be drawn: floating, or in the band.
+const placement = { isFloating: true }
+
+// Where the pet is drawn now: the band when that's the placement, else
+// where it was put, the sidebar winning over the band.
+function site(): 'band' | Dock {
+  if (mirror.dock === 'sidebar') return 'sidebar'
+  return placement.isFloating ? mirror.dock : 'band'
+}
+
+// The menu, opened from the conversation's bottom row while the pet is docked.
+function dockedMenu(requestId: string) {
+  const menu = shownMenu()
+  const plan = menu === undefined ? undefined : planFor({ right: 1, lift: 0 }, menuSize(menu.rows))
+  return menu === undefined || plan?.host !== requestId ? undefined : { plan, menu }
+}
+
+type Host = { plan: Plan; petSize: Size; catcher: Catcher }
+
+// The floating pet's plan, if this row hosts it. Every row's report can move
+// the host, so a new plan redraws them all.
+function hostOf($: EngineInterface, requestId: string, component: string): Host | undefined {
+  const petSize = sizeOf(mirror.size)
+  const plan = planFor(mirror.offset, petSize)
+  if (plan === undefined) return undefined
+
+  if (plan.key !== mirror.planKey) {
+    mirror.planKey = plan.key
+    $.ui.invalidate('ui.render')
+  }
+  if (plan.host !== requestId) return undefined
+
+  // A drag holds the catcher where it was pressed until the drop.
+  const held = mirror.drag?.requestId === requestId ? mirror.drag.catcher : undefined
+  const catcher: Catcher = held ?? { top: plan.top, right: plan.at.right, height: petSize.rows }
+  mirror.catcher = { requestId, at: catcher }
+  mirror.hostKind = component
+  return { plan, petSize, catcher }
+}
+
+// What the host row draws of the pet. It reads the offset so a move redraws
+// it, and only it.
+async function floatingShare($: EngineInterface, host: Host, look: Look): Promise<RowShare> {
+  await read($, offset)
+  const { plan, petSize, catcher } = host
+  // No frame while dragging: a moving floating box can leave its old cells.
+  // Nor once the catcher moved: the pointer may no longer be over the pet.
+  const isLit = (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
+  return {
+    plan,
+    isLit,
+    isFading: !isLit && mirror.isFrameFading,
+    isDebug: mirror.isDebug,
+    look,
+    petSize,
+    said: await read($, bubble),
+    menu: shownMenu(),
+    catcher,
+    screenColumns: screen.columns,
+  }
+}
+
 export const register: Register = (on, options) => {
   const defaultSize: SizeName = isSizeName(options.size) ? options.size : 'medium'
-  const isFloating = options.placement !== 'band'
+  placement.isFloating = options.placement !== 'band'
   voice.chatter = asChatter(options.chatter)
   resetControls(defaultSize)
   resetMenu()
@@ -166,7 +229,7 @@ export const register: Register = (on, options) => {
     // won't redraw for that by itself: left as it was, the pet can end up above
     // the top of the conversation, out of sight.
     const hasResized = e.viewport !== undefined && noteBottomSlot(e.viewport.rows, e.viewport.columns, e.props.maxRows)
-    if (hasResized && isFloating) $.ui.invalidate('ui.render')
+    if (hasResized && placement.isFloating) $.ui.invalidate('ui.render')
     if (e.props.hasSurvey) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
@@ -182,13 +245,12 @@ export const register: Register = (on, options) => {
       )
     }
 
-    if (isFloating || mirror.dock === 'sidebar') return next(e)
+    if (site() !== 'band') return next(e)
 
     const look = await petLook($)
     if (look === undefined) return next(e)
 
-    playback.siteRequestId = e.requestId
-    playback.framesDir = look.framesDir
+    hostPicture(e.requestId, look.framesDir)
 
     const caption = { badge: await read($, badge), status: await statusLine($), said: await read($, bubble) }
     const petSize = sizeOf(mirror.size)
@@ -219,61 +281,34 @@ export const register: Register = (on, options) => {
       ],
     },
     async ($, e, next) => {
-      if (!isFloating || e.surface !== 'terminal') return next(e)
+      const where = site()
+      if (where === 'band' || e.surface !== 'terminal') return next(e)
 
       noteRow(e.requestId, e.props.onScreen)
       const look = await petLook($)
-      if (look === undefined) return next(e)
+      if (look === undefined || where === 'sidebar') return next(e)
 
       // Docked, the bottom row only opens the pet's menu, at the right end
       // just above the prompt: the footer can't reach that far up.
-      if (mirror.dock === 'sidebar') return next(e)
-      if (mirror.dock !== 'conversation') {
-        const menu = shownMenu()
-        const menuPlan = menu === undefined ? undefined : planFor({ right: 1, lift: 0 }, menuSize(menu.rows))
-        if (menu === undefined || menuPlan?.host !== e.requestId) return next(e)
-        return rowWithMenu($.ui.resolve(e), await next(e), menuPlan, menu)
+      if (where === 'prompt') {
+        const docked = dockedMenu(e.requestId)
+        return docked === undefined ? next(e) : rowWithMenu($.ui.resolve(e), await next(e), docked.plan, docked.menu)
       }
 
-      const petSize = sizeOf(mirror.size)
-      const plan = planFor(mirror.offset, petSize)
-      if (plan === undefined) return next(e)
-
-      // The host may have changed with this row's report.
-      if (plan.key !== mirror.planKey) {
-        mirror.planKey = plan.key
-        $.ui.invalidate('ui.render')
-      }
-      if (plan.host !== e.requestId) return next(e)
-
-      // A drag holds the catcher where it was pressed until the drop.
-      const held = mirror.drag?.requestId === e.requestId ? mirror.drag.catcher : undefined
-      const catcher: Catcher = held ?? { top: plan.top, right: plan.at.right, height: petSize.rows }
-      mirror.catcher = { requestId: e.requestId, at: catcher }
-      mirror.hostKind = e.component
+      const host = hostOf($, e.requestId, e.component)
+      if (host === undefined) return next(e)
 
       const row = await next(e)
-
-      // The host row follows the pet as it moves.
-      await read($, offset)
-      playback.siteRequestId = e.requestId
-      playback.framesDir = look.framesDir
-
-      const said = await read($, bubble)
-      // No frame while dragging: a moving floating box can leave its old cells.
-      // Nor once the catcher moved: the pointer may no longer be over the pet.
-      const isLit = (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
-      const isFading = !isLit && mirror.isFrameFading
-      const menu = shownMenu()
-      const share = { plan, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, menu, catcher, screenColumns: screen.columns }
-      return rowWithPet($.ui.resolve(e), row, share)
+      hostPicture(e.requestId, look.framesDir)
+      return rowWithPet($.ui.resolve(e), row, await floatingShare($, host, look))
     },
   )
 
   // The caption in the footer: the pet's name, level, mood and what it's up to,
   // and a handle for the pet. Docked on the prompt, the picture hangs from here.
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
-    if (!isFloating || e.surface !== 'terminal' || mirror.dock === 'sidebar') return next(e)
+    const where = site()
+    if (where === 'band' || where === 'sidebar' || e.surface !== 'terminal') return next(e)
 
     const look = await petLook($)
     if (look === undefined) return next(e)
@@ -294,8 +329,7 @@ export const register: Register = (on, options) => {
     }
 
     if (isDocked) {
-      playback.siteRequestId = e.requestId
-      playback.framesDir = look.framesDir
+      hostPicture(e.requestId, look.framesDir)
     }
 
     // Undocking by a drag takes the pet away mid-drag, so the catcher stays
@@ -316,8 +350,7 @@ export const register: Register = (on, options) => {
     const view = await sidebarView($, e.props.scroll.bodyRows, e.props.bodyColumns, isInline)
     if (view === undefined) return next(e)
 
-    playback.siteRequestId = e.requestId
-    playback.framesDir = view.look.framesDir
+    hostPicture(e.requestId, view.look.framesDir)
     return sidebar($.ui.resolve(e), view, id => void pressSidebar($, id))
   })
 

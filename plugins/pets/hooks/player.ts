@@ -130,6 +130,12 @@ export function animate($: EngineInterface) {
   wake($)
 }
 
+// The drawing holding the picture: the one the animation blits to.
+export function hostPicture(requestId: string, framesDir: string) {
+  playback.siteRequestId = requestId
+  playback.framesDir = framesDir
+}
+
 export async function setActivity($: EngineInterface, next: Activity, nextDetail: string | null = null) {
   await update($, detail, () => nextDetail)
   if ((await read($, activity)) === next) return
