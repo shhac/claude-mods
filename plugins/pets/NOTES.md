@@ -71,3 +71,16 @@ From other pet and companion mods, a third-party field guide, and issues on anth
 - **Compose with the rest:** a site hook that returns its own tree without `next(e)`'s result hides the host's content and other mods' content (zycck/claude-mods#15). Wrap `await next(e)` in a column with your own tree.
 - **Timers don't survive a hot reload,** so resume them from a render hook as well as `session.start`. Stop them on `session.end`.
 - cabrera-evil/claude-pet steps down to a smaller size when the band is too short, and gives each running subagent a mini pet.
+
+## Drawing over the conversation in general
+
+What a wider search turned up (October 2026), beyond pets:
+
+- **No site paints above every row.** The 15 render components are the whole list. Pane `placement` is only `dock` or `inline`, there's no `zIndex`, and toasts are the only engine overlay. An `AboveTranscript` site ([#100338](https://github.com/anthropics/claude-code/issues/100338)) and clickable overlays ([#93973](https://github.com/anthropics/claude-code/issues/93973)) are open requests.
+- **The `position` doc says it outright:** "painted over those before it … the pointer on it is on its parent. Clipped, pointer and paint, by the region its site is in."
+- **Community mods do get the pointer into an absolute `Client`, but only where it lies over its parent's own box.** Examples are a click catcher over a pane image, and one per transcript row in a screensaver ([#100637](https://github.com/anthropics/claude-code/issues/100637)). The pet hangs above its host row, outside that box, which may be why a `Client` in it got nothing. Untested.
+- **An absolute `Client` over a blitted element on a transcript row can stop blits from painting** ([#100637](https://github.com/anthropics/claude-code/issues/100637)): they resolve fine and never show. The workaround is to wrap the blitted element in its own Box placed before the catcher. The reporter traced it to unchanged absolute siblings copying the previous frame over newer cells, which may also be our stale-cell bug.
+- **An absolute Box with `overflow="hidden"` leaks clipped cells after scrolling** ([#100030](https://github.com/anthropics/claude-code/issues/100030)). Put `overflow="hidden"` on the parent row instead.
+- **The mouse settings matter:**
+  - `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1` also turns off motion tracking, so dragging never moves ([#101046](https://github.com/anthropics/claude-code/issues/101046)).
+  - In Orca and xterm.js terminals, clicks land a few columns right of the pointer once a `Client` listens ([#100654](https://github.com/anthropics/claude-code/issues/100654)).
