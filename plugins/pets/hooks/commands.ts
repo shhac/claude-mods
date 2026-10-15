@@ -3,10 +3,11 @@ import type { EngineInterface } from 'claude-code'
 
 import { adopt, describePets } from './adoption'
 import { describeCare, fed, petted } from './care'
-import { NEXT_SIZE, SIZE_ROWS, goHome, isSizeName, mirror, setDock, setSize } from './controls'
+import { NEXT_SIZE, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
 import { keeper, tend } from './keeper'
 import { findPets, homesFor } from './pets'
 import { react } from './player'
+import { describeStage } from './stage'
 import { say } from './voice'
 
 // `/pet` and its subcommands; each resolves the text shown in reply.
@@ -62,6 +63,13 @@ export async function petCommand($: EngineInterface, args: string) {
     const next = mirror.dock === 'conversation' ? 'prompt' : 'conversation'
     await setDock($, next)
     return next === 'prompt' ? 'Pet is sitting on the prompt box.' : 'Pet is back over the conversation.'
+  }
+
+  if (arg === 'debug') {
+    await setDebug($, !mirror.isDebug)
+    return mirror.isDebug
+      ? `Grab areas outlined; the footer shows what the pet knows of the screen.\n${describeStage()}`
+      : 'Grab areas hidden again.'
   }
 
   if (['off', 'hide', 'on', 'show'].includes(arg)) {

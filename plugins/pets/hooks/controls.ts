@@ -63,6 +63,12 @@ export const mirror: {
   // Which catchers the pointer is over: moving from one row's to the next can
   // tell of the new one first.
   hovering: Set<string>
+  // Draws the catchers, so where the pet can be grabbed shows.
+  isDebug: boolean
+  // The frame just went out: drawn blank a moment, as the bubble is.
+  isFrameFading: boolean
+  // Where the catchers were when the pointer came over one.
+  hoverKey: string
 } = {
   offset: HOME_OFFSET,
   size: 'medium',
@@ -72,6 +78,9 @@ export const mirror: {
   drag: undefined,
   lastClickAt: Number.NEGATIVE_INFINITY,
   hovering: new Set(),
+  isDebug: false,
+  isFrameFading: false,
+  hoverKey: '',
 }
 
 // A load starts the module's own state over; the session's state and the
@@ -86,6 +95,7 @@ export function resetControls(defaultSize: SizeName) {
   mirror.drag = undefined
   mirror.lastClickAt = Number.NEGATIVE_INFINITY
   mirror.hovering.clear()
+  mirror.isDebug = false
 }
 
 export async function restoreControls($: EngineInterface, defaultSize: SizeName) {
@@ -95,6 +105,8 @@ export async function restoreControls($: EngineInterface, defaultSize: SizeName)
   const savedSize = await $.store.get('size')
   mirror.size = isSizeName(savedSize) ? savedSize : defaultSize
   await update($, size, () => mirror.size)
+
+  mirror.isDebug = (await $.store.get('debug')) === true
 
   const savedDock = await $.store.get('dock')
   mirror.dock = isDock(savedDock) ? savedDock : 'conversation'
@@ -120,19 +132,47 @@ export async function setDock($: EngineInterface, next: Dock) {
   $.ui.invalidate('ui.render')
 }
 
+export async function setDebug($: EngineInterface, isDebug: boolean) {
+  mirror.isDebug = isDebug
+  await $.store.set('debug', isDebug)
+  $.ui.invalidate('ui.render')
+}
+
 export async function goHome($: EngineInterface) {
   await setOffset($, HOME_OFFSET)
   await $.store.set('offset', HOME_OFFSET)
   if (mirror.dock !== 'conversation') await setDock($, 'conversation')
 }
 
+const FRAME_FADE_MS = 400
+
 async function lightUp($: EngineInterface) {
   const isLit = mirror.hovering.size > 0
-  if ((await read($, isHovered)) !== isLit) await update($, isHovered, () => isLit)
+  if ((await read($, isHovered)) === isLit) return
+
+  mirror.isFrameFading = !isLit
+  await update($, isHovered, () => isLit)
+  if (!isLit) $.clock.after(FRAME_FADE_MS, () => fadeOut($))
+}
+
+function fadeOut($: EngineInterface) {
+  if (!mirror.isFrameFading) return
+  mirror.isFrameFading = false
+  $.ui.invalidate('ui.render')
+}
+
+// Typing can take the pet from under a resting pointer, and no catcher
+// tells it left. Moved catchers are caught by the rows, which check the
+// plan the light was lit for.
+export async function forgetHover($: EngineInterface) {
+  if (mirror.hovering.size === 0) return
+  mirror.hovering.clear()
+  await lightUp($)
 }
 
 // The pointer came over a catcher or the name tag, or left it.
 export async function hover($: EngineInterface, catcher: string, isOver: boolean) {
+  mirror.hoverKey = mirror.planKey
   if (isOver) mirror.hovering.add(catcher)
   else mirror.hovering.delete(catcher)
   await lightUp($)

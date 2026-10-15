@@ -43,12 +43,28 @@ const frame = ({ Box }: Terminal, petSize: Size, top: number, right: number) => 
   />
 )
 
+// The frame's cells drawn blank, so none of it is left behind once it goes.
+const blankFrame = ({ Box, Text }: Terminal, petSize: Size, top: number, right: number) => (
+  <Box position="absolute" top={top - 1} right={right - 1} flexDirection="column">
+    {Array.from({ length: petSize.rows + 2 }, (_, row) =>
+      row === 0 || row === petSize.rows + 1 ? (
+        <Text key={`edge-${row}`}>{' '.repeat(petSize.columns + 2)}</Text>
+      ) : (
+        <Box key={`side-${row}`} width={petSize.columns + 2} justifyContent="space-between">
+          <Text> </Text>
+          <Text> </Text>
+        </Box>
+      ),
+    )}
+  </Box>
+)
+
 // Invisible, over the pet; it goes last so the pointer finds it.
-const catcherOver = ({ Client }: Terminal, columns: number, rows: number) => (
+const catcherOver = ({ Client }: Terminal, columns: number, rows: number, isOutlined: boolean) => (
   <Client
     key="handle"
     module="./handle.tsx"
-    props={{ columns, rows } satisfies HandleProps}
+    props={{ columns, rows, isOutlined } satisfies HandleProps}
     width={columns}
     height={rows}
   />
@@ -132,7 +148,7 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
       <Box>
         {picture(elements, look, petSize)}
         <Box position="absolute" top={0} left={0}>
-          {catcherOver(elements, petSize.columns, petSize.rows)}
+          {catcherOver(elements, petSize.columns, petSize.rows, false)}
         </Box>
       </Box>
     </Box>
@@ -143,6 +159,8 @@ export type RowShare = {
   plan: Plan
   isHost: boolean
   isLit: boolean
+  isFading: boolean
+  isDebug: boolean
   look: Look
   petSize: Size
   said: Bubble | null
@@ -166,6 +184,7 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
     <Box flexDirection="column">
       {row}
       {share.isLit ? frame(elements, petSize, plan.top, plan.at.right) : null}
+      {share.isFading ? blankFrame(elements, petSize, plan.top, plan.at.right) : null}
       {share.isHost ? (
         <Box position="absolute" top={plan.top} right={plan.at.right}>
           {picture(elements, share.look, petSize)}
@@ -178,7 +197,7 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
       ) : null}
       {catcher === undefined ? null : (
         <Box position="absolute" top={catcher.top} right={catcher.right}>
-          {catcherOver(elements, petSize.columns, catcher.height)}
+          {catcherOver(elements, petSize.columns, catcher.height, share.isDebug)}
         </Box>
       )}
     </Box>

@@ -6,14 +6,14 @@ import { settleIn } from './adoption'
 import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
 import { afterTool, afterTurn } from './care'
 import { petCommand } from './commands'
-import { aimPet, click, dragPet, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
+import { aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithPet } from './drawings'
 import type { Look } from './drawings'
 import type { GripProps } from './grip'
 import { tend } from './keeper'
 import { animate, playback, react, setActivity } from './player'
-import { forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
+import { describeStage, forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
 import { awaitThought, feelTool, hushStale, noteRequest, remark, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
@@ -37,8 +37,8 @@ const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
 // What the pet does, shown while the pointer is over it or its name tag.
 const HINTS: Record<Dock, string> = {
-  conversation: 'drag to move · double-click to dock · right-click to resize',
-  prompt: 'drag or double-click to undock · right-click to resize',
+  conversation: 'drag · 2-click: dock · right-click: size',
+  prompt: 'drag, 2-click: undock · right-click: size',
 }
 
 const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'WebFetch', 'WebSearch', 'ToolSearch'])
@@ -68,7 +68,8 @@ async function petLook($: EngineInterface): Promise<Look | undefined> {
 }
 
 async function statusLine($: EngineInterface) {
-  if (await read($, isHovered)) return HINTS[await read($, dock)]
+  if (mirror.isDebug) return describeStage()
+  if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[await read($, dock)]
 
   const shownReaction = await read($, reaction)
   if (shownReaction !== null) return REACTION_LABEL[shownReaction]
@@ -112,6 +113,11 @@ export const register: Register = (on, options) => {
   // What the person asked is what the pet's feelings are about.
   on('prompt.submit', async ($, e, next) => {
     if (e.command === undefined) noteRequest(e.text)
+    return next(e)
+  })
+
+  on('prompt.edit', async ($, e, next) => {
+    await forgetHover($)
     return next(e)
   })
 
@@ -260,8 +266,11 @@ export const register: Register = (on, options) => {
       }
 
       const said = isHost ? await read($, bubble) : null
-      const isLit = isHost && (await read($, isHovered))
-      const share = { plan, isHost, isLit, look, petSize, said, catcher, screenColumns: screen.columns }
+      // No frame while dragging: a moving floating box can leave its old cells.
+      // Nor once the catchers moved: the pointer may no longer be over the pet.
+      const isLit = isHost && (await read($, isHovered)) && mirror.drag === undefined && mirror.hoverKey === plan.key
+      const isFading = isHost && !isLit && mirror.isFrameFading
+      const share = { plan, isHost, isLit, isFading, isDebug: mirror.isDebug, look, petSize, said, catcher, screenColumns: screen.columns }
       return rowWithPet($.ui.resolve(e), row, share)
     },
   )

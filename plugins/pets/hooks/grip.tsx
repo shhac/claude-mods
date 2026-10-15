@@ -15,6 +15,13 @@ type Press = { x: number; y: number; hasMoved: boolean }
 // the pointer listener set on the first run must read the latest values.
 type Live = { columns: number; press: Press | undefined; sent: string }
 
+// The caption keeps one width whatever it says: the footer is right-aligned,
+// so a longer or shorter caption would move it out from under the pointer.
+const STATUS_COLUMNS = 44
+const BADGE_COLUMNS = 10
+const fixed = (text: string, columns: number) =>
+  text.length > columns ? `${text.slice(0, columns - 1)}…` : text.padEnd(columns)
+
 // The footer is right-aligned and the caption padded to sit under the pet, so
 // the region grows leftwards as the pet moves: count from its right edge for
 // a column that stays put on screen. Rows count up from the footer, 0 on it.
@@ -79,7 +86,7 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
         <Text color="claude" weight="bold">
           {props.name}
         </Text>
-        {props.badge === '' ? '' : ` ${props.badge}`} {props.status}
+        {` ${fixed(props.badge, BADGE_COLUMNS)} ${fixed(props.status, STATUS_COLUMNS)}`}
       </Text>
     </Box>
   )

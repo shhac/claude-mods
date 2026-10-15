@@ -207,3 +207,10 @@ export function planFor(wanted: Offset, size: Size): Plan | undefined {
 
   return { ...plan, key: keyOf(plan) }
 }
+
+// For `/pet debug`: the rows the pet is laid over, and what it can't see.
+export function describeStage() {
+  const rows = layout()
+  const known = rows === undefined ? 'no fit, bottom row only' : `${rows.length} rows ${totalOf(rows)} ln`
+  return `${known} · ${belowOf(rows)} below · view ${screen.conversationRows}/${screen.rows}`
+}

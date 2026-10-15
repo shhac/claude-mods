@@ -273,7 +273,7 @@ describe('the pet band', () => {
   })
 
   test('the pointer over the pet lights it up and says what it can do', async ($, on) => {
-    codexHome(on)
+    const { clock } = codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
@@ -284,10 +284,17 @@ describe('the pet band', () => {
 
     await host.pointer({ type: 'enter', x: 1, y: 1 })
     expect((await frame())?.props).toMatchObject({ position: 'absolute', top: 34 - 1, right: -1 })
-    expect(await footer.find({ type: 'Text', text: /drag to move/, in: 'grip' })).toBeDefined()
+    expect(await footer.find({ type: 'Text', text: /2-click: dock/, in: 'grip' })).toBeDefined()
 
     await host.pointer({ type: 'leave', x: 1, y: 1 })
     expect(await frame()).toBeUndefined()
+
+    // A new row moves the pet from under a resting pointer, so it goes out.
+    await host.pointer({ type: 'enter', x: 1, y: 1 })
+    expect(await frame()).toBeDefined()
+    const newer = await $.ui.mount(conversationRow('row-2', 0))
+    expect((await newer.findAll({ type: 'Box' })).find(box => box.props.borderStyle === 'round')).toBeUndefined()
+    await clock.advance(1000)
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {

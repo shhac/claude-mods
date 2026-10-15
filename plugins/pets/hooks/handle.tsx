@@ -1,6 +1,6 @@
 import type { ClientModule } from 'claude-code'
 
-export type HandleProps = { columns: number; rows: number }
+export type HandleProps = { columns: number; rows: number; isOutlined: boolean }
 
 type Press = { x: number; y: number; hasMoved: boolean }
 
@@ -13,7 +13,7 @@ type Live = { press: Press | undefined; gesture: number; sent: string }
 // place on screen, and each post carries the whole way from the press: a
 // later post in the same frame replaces an undelivered one.
 const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
-  const { Box } = surface.elements
+  const { Box, Text } = surface.elements
 
   if (surface.state === undefined) {
     const live: Live = { press: undefined, gesture: 0, sent: '' }
@@ -67,7 +67,18 @@ const Handle: ClientModule<HandleProps, { live: Live }> = (props, surface) => {
     surface.setState({ live })
   }
 
-  return <Box width={props.columns} height={props.rows} />
+  if (!props.isOutlined) return <Box width={props.columns} height={props.rows} />
+
+  // `/pet debug`: dots over every cell the pointer can grab the pet by.
+  return (
+    <Box width={props.columns} height={props.rows} flexDirection="column">
+      {Array.from({ length: props.rows }, (_, row) => (
+        <Text key={`dots-${row}`} color="warning">
+          {'·'.repeat(props.columns)}
+        </Text>
+      ))}
+    </Box>
+  )
 }
 
 export default Handle
