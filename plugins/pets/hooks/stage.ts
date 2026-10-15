@@ -99,21 +99,33 @@ type Placed = { requestId: string; seen: Seen; fromBottom: number; lines: number
 
 const linesOf = (seen: OnScreen) => seen.last - seen.first + 1
 
+const bottomUp = () => [...visible.entries()].sort(([, a], [, b]) => b.order - a.order)
+
+// Of the rows bottom first, those still on screen. Nothing can lie below a
+// row cut at the bottom or above one cut at the top: rows there left without
+// reporting it.
+function onScreenSpan(rows: readonly (readonly [string, Seen])[]) {
+  const lowest = Math.max(0, rows.findIndex(([, seen]) => isCutAtBottom(seen)))
+  const found = rows.findLastIndex(([, seen]) => isCutAtTop(seen))
+  return { lowest, highest: found < 0 ? rows.length - 1 : found }
+}
+
+// Forgets the rows that left without saying so, so the fallback host isn't
+// one of them.
+function forgetStale() {
+  const rows = bottomUp()
+  const { lowest, highest } = onScreenSpan(rows)
+  rows.slice(0, lowest).forEach(([id]) => visible.delete(id))
+  rows.slice(highest + 1).forEach(([id]) => visible.delete(id))
+}
+
 // Rows on screen, bottom first, each with how far its last visible line sits
 // above the bottom of the content. Undefined when the reports don't add up
 // (a row that left without saying so), and the pet falls back to one row.
 export function layout(): readonly Placed[] | undefined {
-  const bottomUp = [...visible.entries()].sort(([, a], [, b]) => b.order - a.order)
-
-  // Nothing can lie below a row cut at the bottom or above one cut at the top:
-  // rows there left without reporting it.
-  const lowest = Math.max(0, bottomUp.findIndex(([, seen]) => isCutAtBottom(seen)))
-  const found = bottomUp.findLastIndex(([, seen]) => isCutAtTop(seen))
-  const highest = found < 0 ? bottomUp.length - 1 : found
-  bottomUp.slice(0, lowest).forEach(([id]) => visible.delete(id))
-  bottomUp.slice(highest + 1).forEach(([id]) => visible.delete(id))
-
-  const rows = bottomUp.slice(lowest, highest + 1)
+  const all = bottomUp()
+  const { lowest, highest } = onScreenSpan(all)
+  const rows = all.slice(lowest, highest + 1)
   const isWholeBetween = rows.every(
     ([, seen], index) => (index === 0 || !isCutAtBottom(seen)) && (index === rows.length - 1 || !isCutAtTop(seen)),
   )
@@ -157,15 +169,16 @@ const keyOf = (plan: Omit<Plan, 'key'>) => `${plan.host}:${plan.top}:${plan.at.r
 
 // The bottom-most row: one cut at the bottom, else the newest on screen.
 function bottomRow(): Placed | undefined {
-  const bottomUp = [...visible.entries()].sort(([, a], [, b]) => b.order - a.order)
-  const cut = bottomUp.find(([, seen]) => isCutAtBottom(seen))
-  const [requestId, seen] = cut ?? bottomUp[0] ?? []
+  const rows = bottomUp()
+  const cut = rows.find(([, seen]) => isCutAtBottom(seen))
+  const [requestId, seen] = cut ?? rows[0] ?? []
   return requestId === undefined || seen === undefined ? undefined : { requestId, seen, fromBottom: 0, lines: linesOf(seen) }
 }
 
 // When the rows don't add up, the bottom row is still the host, held to the
 // conversation's height.
 export function planFor(wanted: Offset, size: Size): Plan | undefined {
+  forgetStale()
   const rows = layout()
   const host = rows?.[0] ?? bottomRow()
   if (host === undefined) return undefined
