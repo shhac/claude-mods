@@ -81,7 +81,7 @@ const SIDEBAR_PANE = {
   plugin: 'pets',
   surface: 'terminal',
   component: 'Pane',
-  requestId: 'pets-sidebar',
+  requestId: 'app-paulie-claude-mods-pets-sidebar',
   props: { title: 'Pet', isFocused: false, bodyColumns: 34, placement: 'dock', scroll: { offset: 0, bodyRows: 50 }, view: {} },
   viewport: { columns: 194, rows: 66, isFullscreen: true },
 } as const
@@ -491,7 +491,7 @@ describe('the pet band', () => {
     const host = await $.ui.mount(conversationRow('row-1', 5))
 
     expect((await $.command.run(pet('dock sidebar'))).text).toBe('Pet is in its sidebar.')
-    expect(panes).toEqual(['open pets-sidebar'])
+    expect(panes).toEqual(['open app-paulie-claude-mods-pets-sidebar'])
     const side = await $.ui.mount(SIDEBAR_PANE)
     expect(await side.find({ type: 'Image', key: 'pet' })).toBeDefined()
     expect(await host.find({ type: 'Image', key: 'pet' })).toBeUndefined()
@@ -506,7 +506,7 @@ describe('the pet band', () => {
 
     await side.press({ key: 'section:config' })
     await side.press({ key: 'place:conversation' })
-    expect(panes).toEqual(['open pets-sidebar', 'close pets-sidebar'])
+    expect(panes).toEqual(['open app-paulie-claude-mods-pets-sidebar', 'close app-paulie-claude-mods-pets-sidebar'])
     expect(await host.find({ type: 'Image', key: 'pet' })).toBeDefined()
   })
 
@@ -522,7 +522,7 @@ describe('the pet band', () => {
 
     expect((await $.command.run(pet('dock sidebar'))).text).toBe('No room for the sidebar in this terminal.')
     // The unplaced pane would wait for room and turn up later; it's closed.
-    expect(panes).toEqual(['close pets-sidebar'])
+    expect(panes).toEqual(['close app-paulie-claude-mods-pets-sidebar'])
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {

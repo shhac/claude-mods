@@ -38,8 +38,9 @@ export const isSizeName = (value: unknown): value is SizeName => typeof value ==
 export const isDock = (value: unknown): value is Dock =>
   value === 'conversation' || value === 'prompt' || value === 'sidebar'
 
-// The sidebar's pane, and the width it asks for beside the conversation.
-export const SIDEBAR = 'pets-sidebar'
+// The sidebar's pane, and the width it asks for beside the conversation. The
+// id is ours alone (pane ids take no dots, so the namespace is dashed).
+export const SIDEBAR = 'app-paulie-claude-mods-pets-sidebar'
 const SIDEBAR_COLUMNS = 34
 
 export const sizeOf = (name: SizeName): Size => ({ rows: SIZE_ROWS[name], columns: columnsForRows(SIZE_ROWS[name]) })
