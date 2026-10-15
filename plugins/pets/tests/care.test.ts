@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { award, describeAchievements } from '../hooks/achievements'
 import { afterTest, afterTool, afterTurn, badgeOf, careFrom, fed, isHungry, isSleepy, isTired, levelOf, meter, milestone, newCare, played, welcomeBack } from '../hooks/care'
 import { feelingAboutTool, fitBubble, toolLine, wrapBubble } from '../hooks/chatter'
+import { isTestRun } from '../hooks/checks'
 
 const HOUR = 60 * 60 * 1000
 const NOW = Date.UTC(2026, 9, 15, 12)
@@ -124,5 +125,17 @@ describe('what the pet says', () => {
     expect(fitBubble('x'.repeat(100))).toHaveLength(84)
     expect(wrapBubble('the gears are turning, slowly but surely ⚙️', 20)).toEqual(['the gears are', 'turning, slowly but', 'surely ⚙️'])
     expect(wrapBubble('x'.repeat(30), 10)).toEqual(['xxxxxxxxx…'])
+  })
+})
+
+describe('test runs', () => {
+  test('a command that starts a test runner, in any of its segments', () => {
+    const runs = ['bun test', 'cd plugins/pets && claude plugin test .', 'CI=1 npx vitest run', 'go test ./...', 'pnpm run test', 'python -m pytest -q']
+    expect(runs.filter(isTestRun)).toEqual(runs)
+  })
+
+  test('mentioning tests is not running them', () => {
+    const others = ['ls tests', 'cat foo.test.ts', 'git commit -m "add test"', 'rg test', 'echo bun test']
+    expect(others.filter(isTestRun)).toEqual([])
   })
 })

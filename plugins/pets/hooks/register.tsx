@@ -4,7 +4,8 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Activity, Dock, SizeName } from '../types'
 import { settleIn } from './adoption'
 import { ACTIVITY_LABEL, REACTION_LABEL } from './atlas'
-import { afterTool, afterTurn } from './care'
+import { afterTest, afterTool, afterTurn, isHungry, isSleepy } from './care'
+import { isTestRun } from './checks'
 import { petCommand } from './commands'
 import { aimPet, click, dragPet, forgetHover, hover, isSizeName, mirror, resetControls, sizeOf } from './controls'
 import type { Catcher } from './controls'
@@ -12,12 +13,13 @@ import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
 import type { ShownMenu } from './drawings'
 import type { Look } from './drawings'
 import type { GripProps } from './grip'
-import { tend } from './keeper'
+import { keeper, tend } from './keeper'
 import { closeMenu, menuHover, menuMirror, pickFromMenu, resetMenu, toggleMenu } from './menu-actions'
 import { menuSize } from './menu-rows'
+import { fetchGame } from './play'
 import { animate, playback, react, setActivity } from './player'
 import { describeStage, forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
-import { awaitThought, feelTool, hushStale, noteRequest, remark, stopMusing, voice } from './voice'
+import { awaitThought, feelTool, hushStale, noteRequest, remark, say, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
 // Docked, the pet's top is on the prompt box's top edge, three rows above the
@@ -70,6 +72,14 @@ async function petLook($: EngineInterface): Promise<Look | undefined> {
   return current === null ? undefined : { displayName: current.displayName, framesDir: current.framesDir }
 }
 
+// Between turns the pet says how it is: sleepy, hungry, or just ready.
+async function restingLabel($: EngineInterface) {
+  const care = keeper.care
+  if (care === undefined) return ACTIVITY_LABEL.ready
+  if (isSleepy(care, await $.clock.now())) return 'Sleepy 💤'
+  return isHungry(care) ? 'Hungry' : ACTIVITY_LABEL.ready
+}
+
 async function statusLine($: EngineInterface) {
   if (mirror.isDebug) return `${mirror.hostKind} · ${describeStage()}`
   if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[await read($, dock)]
@@ -78,8 +88,15 @@ async function statusLine($: EngineInterface) {
   if (shownReaction !== null) return REACTION_LABEL[shownReaction]
 
   const tool = await read($, detail)
-  const label = ACTIVITY_LABEL[await read($, activity)]
+  const now = await read($, activity)
+  const label = now === 'ready' ? await restingLabel($) : ACTIVITY_LABEL[now]
   return tool === null ? label : `${label} · ${tool}`
+}
+
+async function cheerTests($: EngineInterface, hasPassed: boolean) {
+  await tend($, care => afterTest(care, hasPassed))
+  if (hasPassed) await react($, 'celebrating')
+  await say($, hasPassed ? 'tests green! 💚' : 'ouch, red… 🩹')
 }
 
 const shownMenu = (): ShownMenu | undefined =>
@@ -120,6 +137,7 @@ export const register: Register = (on, options) => {
   on('session.end', async ($, e, next) => {
     forgetRows()
     stopMusing()
+    fetchGame.generation += 1
     return next(e)
   })
 
@@ -155,6 +173,12 @@ export const register: Register = (on, options) => {
     await setActivity($, 'running')
     await tend($, care => afterTool(care, isError))
     if (isError && !isAsking) await react($, 'failed')
+
+    // A test run that ran here and wasn't refused: a background one comes
+    // back at once, before any result.
+    const command = fieldOf(e, 'command')
+    const isTestCall = e.tool === 'Bash' && typeof command === 'string' && isTestRun(command)
+    if (isTestCall && fieldOf(e, 'run_in_background') !== true && ran.deny === undefined) await cheerTests($, !isError)
 
     return ran
   }).catch(($, e, next) => next(e))

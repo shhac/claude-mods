@@ -11,7 +11,9 @@ function idAt(rows: readonly MenuRow[], x: number, y: number): string | undefine
   const row = rows[y - 1]
   if (row === undefined || x < 1) return undefined
   if (row.kind === 'action') return row.isDisabled ? undefined : row.id
-  return choiceSpans(row).find(span => x - 1 >= span.from && x - 1 < span.to)?.id
+  const span = choiceSpans(row).find(one => x - 1 >= one.from && x - 1 < one.to)
+  const choice = row.choices.find(one => one.id === span?.id)
+  return choice === undefined || choice.isDisabled ? undefined : choice.id
 }
 
 // Mutable per instance: the pointer listener set on the first run reads the
@@ -63,7 +65,13 @@ const Menu: ClientModule<MenuProps, { live: Live }> = (props, surface) => {
           <Text key={row.label}>
             {` ${row.label} `}
             {row.choices.map(choice => (
-              <Text key={choice.id} inverse={choice.id === hovered} bold={choice.isCurrent} dimColor={!choice.isCurrent}>
+              <Text
+                key={choice.id}
+                inverse={choice.id === hovered}
+                bold={choice.isCurrent}
+                dimColor={choice.isDisabled || !choice.isCurrent}
+                strikethrough={choice.isDisabled}
+              >
                 {`${choice.label} `}
               </Text>
             ))}

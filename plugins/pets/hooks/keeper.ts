@@ -16,13 +16,15 @@ const storeKey = (petId: string) => `care:${petId}`
 
 export async function loadCare($: EngineInterface, petId: string) {
   const now = await $.clock.now()
-  const care = welcomeBack(careFrom(await $.store.get(storeKey(petId)), now), now)
+  // Coming back can earn one (a streak), and older stores predate them.
+  const { care, earned } = award(welcomeBack(careFrom(await $.store.get(storeKey(petId)), now), now), now)
 
   keeper.petId = petId
   keeper.care = care
   noteCare(care.mood, levelOf(care.xp))
   await $.store.set(storeKey(petId), care)
   await update($, badge, () => badgeOf(care))
+  if (earned.length > 0) await say($, earned.map(one => `🏆 ${one.name}`).join(' · '))
   return care
 }
 

@@ -29,7 +29,11 @@ function codexHome(on: On) {
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   on('turn.complete', () => ({ text: '' }))
   on('classic.Notification', () => ({}))
-  on('tool.call', () => ({ result: { type: 'text', file: { filePath: '/x', content: '', numLines: 0, startLine: 1, totalLines: 0 } } }))
+  // A command with "fail" in it fails.
+  on('tool.call', ($, e) => ({
+    result: { type: 'text', file: { filePath: '/x', content: '', numLines: 0, startLine: 1, totalLines: 0 } },
+    ...('command' in e && String(e.command).includes('fail') ? { isError: true } : {}),
+  }))
   on('ui.blit', () => ({ value: {} }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
@@ -296,8 +300,8 @@ describe('the pet band', () => {
     await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
     expect(await host.find({ type: 'Text', text: /Sit on the prompt/, in: 'menu' })).toBeDefined()
 
-    // The size row: " Size small medium large", inside the border.
-    await host.pointer({ type: 'down', x: 20, y: 3, button: 'left', in: 'menu' })
+    // The size row, fifth: " Size small medium large", inside the border.
+    await host.pointer({ type: 'down', x: 20, y: 5, button: 'left', in: 'menu' })
     expect((await host.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
     await clock.advance(1000)
     expect(await host.find({ key: 'menu' })).toBeUndefined()
@@ -396,6 +400,46 @@ describe('the pet band', () => {
     await footer.pointer({ type: 'down', x: 0, y: 0, button: 'right', in: 'grip' })
     expect(await host.find({ type: 'Text', text: /Back over the chat/, in: 'menu' })).toBeDefined()
     await clock.advance(20000)
+  })
+
+  test('fetch: the pet runs to the far side and back, and is a little tired after', async ($, on) => {
+    const { clock } = codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+    const right = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')?.props.right
+
+    await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
+    await host.pointer({ type: 'down', x: 3, y: 3, button: 'left', in: 'menu' })
+    await clock.advance(500)
+    expect(await right()).toBeGreaterThan(0)
+
+    await clock.advance(10000)
+    expect(await right()).toBe(0)
+    expect((await $.command.run(pet('stats'))).text).toContain('1 games of fetch')
+  })
+
+  test('tricks wait for their level', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(FLOATING_BAND)
+    const host = await $.ui.mount(conversationRow('row-1', 5))
+
+    await host.pointer({ type: 'down', x: 1, y: 1, button: 'right' })
+    expect(await host.find({ type: 'Text', text: 'wave·Lv2 ', in: 'menu' })).toBeDefined()
+    // A locked trick can't be picked: the press does nothing.
+    await host.pointer({ type: 'down', x: 10, y: 4, button: 'left', in: 'menu' })
+    expect((await $.command.run(pet('stats'))).text).toContain('0 tricks')
+  })
+
+  test('a green test run is cheered, a red one winced at', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+
+    await $.tool.call({ tool: 'Bash', tool_use_id: 'u1', command: 'cd x && bun test' })
+    await $.tool.call({ tool: 'Bash', tool_use_id: 'u2', command: 'ls tests' })
+    await $.tool.call({ tool: 'Bash', tool_use_id: 'u3', command: 'npm test -- fail' })
+    expect((await $.command.run(pet('stats'))).text).toContain('1 green test runs (best streak 1)')
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {

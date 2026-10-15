@@ -4,7 +4,11 @@
 // An action, or a choice of a few laid side by side.
 export type MenuRow =
   | { kind: 'action'; id: string; label: string; isDisabled: boolean }
-  | { kind: 'choices'; label: string; choices: readonly { id: string; label: string; isCurrent: boolean }[] }
+  | {
+      kind: 'choices'
+      label: string
+      choices: readonly { id: string; label: string; isCurrent: boolean; isDisabled: boolean }[]
+    }
 
 // Where each choice sits inside the border: a space, the row's label, a
 // space, then each choice's label and a space after it.

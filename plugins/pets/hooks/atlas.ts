@@ -48,6 +48,15 @@ export const REACTION_ANIMATION: Record<Reaction, Animation> = {
   failed: 'failed',
   happy: 'jumping',
   levelUp: 'jumping',
+  wave: 'waving',
+  jump: 'jumping',
+  dance: 'running-left',
+  read: 'review',
+}
+
+// Reactions that go on to more animations, each played once after the first.
+export const REACTION_THEN: Partial<Record<Reaction, readonly Animation[]>> = {
+  dance: ['running-right', 'running-left', 'running-right'],
 }
 
 // Labels follow the Codex CLI pet's states so a pet reads the same in both.
@@ -64,6 +73,10 @@ export const REACTION_LABEL: Record<Reaction, string> = {
   failed: 'Blocked',
   happy: '♥',
   levelUp: 'Level up!',
+  wave: 'Wave!',
+  jump: 'Hop!',
+  dance: 'Dance!',
+  read: 'Reading along',
 }
 
 export const frameCount = (animation: Animation) => ANIMATIONS[animation].durations.length

@@ -3,11 +3,13 @@ import type { EngineInterface, Timer } from 'claude-code'
 
 import type { MenuState } from '../types'
 import { describeAchievements } from './achievements'
-import { describeCare, fed } from './care'
+import { describeCare, fed, isHungry } from './care'
+import type { Care } from './care'
 import { feedPet, hidePet, patPet } from './commands'
 import { isSizeName, mirror, setDock, setSize } from './controls'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
+import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
 
 // The pet's right-click menu: what it offers, when it closes, and what a
 // pick does.
@@ -40,18 +42,41 @@ function setMenu($: EngineInterface, state: MenuState) {
   $.ui.invalidate('ui.render')
 }
 
+function feedLabel(care: Care | undefined, now: number) {
+  const meal = care === undefined ? undefined : fed(care, now)
+  if (meal !== undefined && 'waitMinutes' in meal) return `Feed (full for ${meal.waitMinutes} min)`
+  return care !== undefined && isHungry(care) ? 'Feed (hungry!)' : 'Feed'
+}
+
 async function rowsNow($: EngineInterface): Promise<readonly MenuRow[]> {
   const care = keeper.care
-  const meal = care === undefined ? undefined : fed(care, await $.clock.now())
-  const feedLabel = meal !== undefined && 'waitMinutes' in meal ? `Feed (full for ${meal.waitMinutes} min)` : 'Feed'
+  const now = await $.clock.now()
+  const meal = care === undefined ? undefined : fed(care, now)
+  const isTooTired = isFetchTired()
 
   return [
     { kind: 'action', id: 'pat', label: '♥ Pat', isDisabled: care === undefined },
-    { kind: 'action', id: 'feed', label: feedLabel, isDisabled: meal === undefined || 'waitMinutes' in meal },
+    { kind: 'action', id: 'feed', label: feedLabel(care, now), isDisabled: meal === undefined || 'waitMinutes' in meal },
+    { kind: 'action', id: 'fetch', label: isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', isDisabled: care === undefined || isTooTired },
+    {
+      kind: 'choices',
+      label: 'Tricks',
+      choices: TRICKS.map(trick => ({
+        id: `trick:${trick.id}`,
+        label: isUnlocked(trick) ? trick.name : `${trick.name}·Lv${trick.level}`,
+        isCurrent: isUnlocked(trick),
+        isDisabled: !isUnlocked(trick),
+      })),
+    },
     {
       kind: 'choices',
       label: 'Size',
-      choices: (['small', 'medium', 'large'] as const).map(name => ({ id: `size:${name}`, label: name, isCurrent: name === mirror.size })),
+      choices: (['small', 'medium', 'large'] as const).map(name => ({
+        id: `size:${name}`,
+        label: name,
+        isCurrent: name === mirror.size,
+        isDisabled: false,
+      })),
     },
     {
       kind: 'action',
@@ -99,6 +124,9 @@ export function menuHover($: EngineInterface, isOver: boolean) {
 
 export async function pickFromMenu($: EngineInterface, id: string) {
   await closeMenu($)
+
+  if (id === 'fetch') return playFetch($)
+  if (id.startsWith('trick:')) return doTrick($, id.slice('trick:'.length))
 
   const size = id.startsWith('size:') ? id.slice('size:'.length) : undefined
   if (isSizeName(size)) return setSize($, size)

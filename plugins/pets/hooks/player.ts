@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Timer } from 'claude-code'
 
 import type { Activity, Reaction } from '../types'
-import { ACTIVITY_ANIMATION, REACTION_ANIMATION, frameCount, frameDuration, framePath } from './atlas'
+import { ACTIVITY_ANIMATION, REACTION_ANIMATION, REACTION_THEN, frameCount, frameDuration, framePath } from './atlas'
 import type { Animation } from './atlas'
 
 const activity = atom({ plugin: 'pets', key: 'activity' } as const, 'ready')
@@ -20,6 +20,8 @@ export const playback: {
   animation: Animation
   frame: number
   reactionLoopsLeft: number
+  // What a reaction plays next, once each, before going back to the activity.
+  then: readonly Animation[]
   framesDir: string | undefined
   siteRequestId: string | undefined
   isLooping: boolean
@@ -32,6 +34,7 @@ export const playback: {
   animation: 'idle',
   frame: 0,
   reactionLoopsLeft: 0,
+  then: [],
   framesDir: undefined,
   siteRequestId: undefined,
   isLooping: false,
@@ -83,6 +86,13 @@ async function advance($: EngineInterface) {
   playback.reactionLoopsLeft -= 1
   if (playback.reactionLoopsLeft > 0) return
 
+  const [next, ...rest] = playback.then
+  if (next !== undefined) {
+    play(next, 1)
+    playback.then = rest
+    return
+  }
+
   playback.animation = ACTIVITY_ANIMATION[await read($, activity)]
   await update($, reaction, () => null)
 }
@@ -133,7 +143,9 @@ export async function setActivity($: EngineInterface, next: Activity, nextDetail
 
 export async function react($: EngineInterface, next: Reaction) {
   await update($, reaction, () => next)
-  play(REACTION_ANIMATION[next], REACTION_LOOPS)
+  const then = REACTION_THEN[next] ?? []
+  play(REACTION_ANIMATION[next], then.length > 0 ? 1 : REACTION_LOOPS)
+  playback.then = then
   wake($)
 }
 

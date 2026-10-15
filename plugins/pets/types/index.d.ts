@@ -1,6 +1,16 @@
 export type Activity = 'ready' | 'running' | 'reviewing' | 'waiting'
 
-export type Reaction = 'greeting' | 'celebrating' | 'failed' | 'happy' | 'levelUp'
+export type Reaction =
+  | 'greeting'
+  | 'celebrating'
+  | 'failed'
+  | 'happy'
+  | 'levelUp'
+  // Tricks, unlocked by level.
+  | 'wave'
+  | 'jump'
+  | 'dance'
+  | 'read'
 
 // Where the floating pet sits: columns in from the right edge, rows up from
 // the bottom of the last conversation row a hook sees (below it, negative).
