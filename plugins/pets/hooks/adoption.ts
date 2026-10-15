@@ -36,10 +36,19 @@ async function choosePet($: EngineInterface, homes: PetHomes, available: readonl
   return available.find(one => one.id === wanted) ?? available[0]
 }
 
+export const HOW_TO_GET_A_PET = [
+  'Getting a pet:',
+  '- hatch one in Codex with its hatch-pet skill (saved to ~/.codex/pets/<id>/)',
+  '- download one from https://petdex.dev into ~/.claude/pets/<id>/',
+  '- or make one: pet.json (id, displayName, description, spritesheetPath) and a 1536×1872',
+  '  transparent spritesheet of 8×9 cells, 192×208 each, one animation per row.',
+  '  The pets mod README lists the rows; the description is all the pet knows of itself.',
+].join('\n')
+
 export async function describePets($: EngineInterface, homes: PetHomes) {
   const available = await findPets($, homes)
   if (available.length === 0) {
-    return `No pets found. Put a Codex pet folder (pet.json + spritesheet) in ${homes.claude} or ${homes.codex}.`
+    return `No pets found in ${homes.claude} or ${homes.codex}.\n\n${HOW_TO_GET_A_PET}`
   }
 
   const current = await read($, pet)
@@ -50,7 +59,8 @@ export async function describePets($: EngineInterface, homes: PetHomes) {
     ...lines,
     '',
     'Switch with /pet <id>; hide with /pet off.',
-    'Also: /pet size, /pet dock, /pet stats, /pet feed, /pet pat, /pet home.',
+    'Also: /pet size, /pet dock, /pet stats, /pet feed, /pet pat, /pet home, /pet debug.',
+    'New pets: /pet help.',
   ].join('\n')
 }
 

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import { adopt, describePets } from './adoption'
+import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
 import { describeCare, fed, petted } from './care'
 import { NEXT_SIZE, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
 import { keeper, tend } from './keeper'
@@ -47,6 +47,22 @@ export async function petCommand($: EngineInterface, args: string) {
   const [arg = '', value = ''] = args.trim().split(/\s+/)
 
   if (arg === '' || arg === 'list') return describePets($, await homesFor($))
+
+  if (arg === 'help') {
+    return [
+      '/pet                 the pets found; /pet <id> switches',
+      '/pet on | off        show or hide the pet',
+      '/pet home            back to its corner',
+      '/pet size [name]     small, medium or large; cycles without a name',
+      '/pet dock            onto the prompt box, or back',
+      '/pet stats | feed | pat',
+      '/pet debug           show where the pet can be grabbed',
+      '',
+      'On the pet: drag to move, click to pet, double-click to dock, right-click to resize.',
+      '',
+      HOW_TO_GET_A_PET,
+    ].join('\n')
+  }
 
   if (arg === 'home') {
     await goHome($)

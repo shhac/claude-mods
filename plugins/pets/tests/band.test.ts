@@ -149,6 +149,16 @@ describe('the pet band', () => {
     expect(missing.text).toContain('No pet "nope"')
   })
 
+  test('/pet help says how to get a new pet', async ($, on) => {
+    codexHome(on)
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+
+    const help = (await $.command.run(pet('help'))).text
+    expect(help).toContain('/pet dock')
+    expect(help).toContain('hatch-pet')
+    expect(help).toContain('1536×1872')
+  })
+
   test('/pet off hides the band', BAND_PLACEMENT, async ($, on) => {
     codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })

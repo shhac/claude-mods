@@ -88,8 +88,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'pet',
-      description: 'Your Codex-compatible pet: list, switch, show, hide, size, dock, stats, feed',
-      argumentHint: '[list | <id> | on | off | home | size | dock | stats | feed | pat]',
+      description: 'Your Codex-compatible pet: help, list, switch, show, hide, size, dock, stats, feed',
+      argumentHint: '[help | list | <id> | on | off | home | size | dock | stats | feed | pat | debug]',
     })
 
     await hushStale($)
