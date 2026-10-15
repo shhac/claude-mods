@@ -33,18 +33,42 @@ Pets are read from two folders, same format in both:
 - `~/.claude/pets/<id>/`
 - `$CODEX_HOME/pets/<id>/` (default `~/.codex/pets/<id>/`)
 
+### Getting a new pet
+
+- **Hatch one in Codex:** its `hatch-pet` skill draws a pet with an image model and saves it to `~/.codex/pets/<id>/`, where this mod finds it.
+- **Download one** from [Petdex](https://petdex.dev) and put its folder in either place above.
+- **Make one yourself**, as below.
+
+Then `/pet <id>` switches to it. `/pet help` in Claude Code says the same in short.
+
+### Making a pet
+
 A pet folder holds a `pet.json` and its spritesheet:
 
 ```json
 {
   "id": "dawnbyte",
   "displayName": "Dawnbyte",
-  "description": "One short sentence.",
+  "description": "A gentle ginger-tan cat familiar with a periwinkle cloak.",
   "spritesheetPath": "spritesheet.webp"
 }
 ```
 
-The spritesheet is Codex's atlas: a 1536×1872 PNG or WebP, 8 columns × 9 rows of 192×208 cells, one animation per row (idle, running-right, running-left, waving, jumping, failed, waiting, running, review). Codex's `hatch-pet` skill and [Petdex](https://petdex.dev) both make pets in this format.
+The `description` is all the pet knows about itself when it talks: what it looks like and what it's like. Haiku never sees the picture.
+
+The spritesheet is Codex's atlas: a 1536×1872 PNG or WebP with a transparent background, 8 columns × 9 rows of 192×208 cells. Each row is one animation, played left to right; cells past a row's frames stay empty.
+
+| Row | Animation | Frames |
+| --- | --- | --- |
+| 0 | idle (its first frame is the still pet) | 6 |
+| 1 | running right | 8 |
+| 2 | running left | 8 |
+| 3 | waving | 4 |
+| 4 | jumping | 5 |
+| 5 | failed | 8 |
+| 6 | waiting | 6 |
+| 7 | running | 6 |
+| 8 | review | 6 |
 
 Until you pick one, you get the pet Codex is set to (`pet = "custom:<id>"` in `~/.codex/config.toml`).
 
@@ -77,6 +101,7 @@ The pet levels up as it watches you work (replies and tool calls earn xp), likes
 
 ## Commands
 
+- `/pet help`: the commands, and how to get a new pet
 - `/pet` or `/pet list`: the pets found, current one marked
 - `/pet <id>`: switch pets (remembered across sessions)
 - `/pet off` / `/pet on`: hide or show the pet
