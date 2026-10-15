@@ -72,6 +72,8 @@ export const mirror: {
   hoverKey: string
   // The footer's drawing, which holds the docked pet's catcher.
   footerId: string
+  // What kind of row hosts the pet, for /pet debug.
+  hostKind: string
 } = {
   offset: HOME_OFFSET,
   size: 'medium',
@@ -85,6 +87,7 @@ export const mirror: {
   isFrameFading: false,
   hoverKey: '',
   footerId: '',
+  hostKind: '',
 }
 
 // A load starts the module's own state over; the session's state and the

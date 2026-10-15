@@ -7,6 +7,8 @@ export type GripProps = {
   // The pet's level and mood, drawn after its name.
   badge: string
   status: string
+  // The status's fixed width: wider while /pet debug reads out the screen.
+  statusColumns: number
 }
 
 type Press = { x: number; y: number; hasMoved: boolean }
@@ -17,7 +19,6 @@ type Live = { columns: number; press: Press | undefined; sent: string }
 
 // The caption keeps one width whatever it says: the footer is right-aligned,
 // so a longer or shorter caption would move it out from under the pointer.
-const STATUS_COLUMNS = 44
 const BADGE_COLUMNS = 10
 const fixed = (text: string, columns: number) =>
   text.length > columns ? `${text.slice(0, columns - 1)}…` : text.padEnd(columns)
@@ -86,7 +87,7 @@ const Grip: ClientModule<GripProps, { live: Live }> = (props, surface) => {
         <Text color="claude" weight="bold">
           {props.name}
         </Text>
-        {` ${fixed(props.badge, BADGE_COLUMNS)} ${fixed(props.status, STATUS_COLUMNS)}`}
+        {` ${fixed(props.badge, BADGE_COLUMNS)} ${fixed(props.status, props.statusColumns)}`}
       </Text>
     </Box>
   )

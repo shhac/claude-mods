@@ -71,7 +71,7 @@ async function petLook($: EngineInterface): Promise<Look | undefined> {
 }
 
 async function statusLine($: EngineInterface) {
-  if (mirror.isDebug) return describeStage()
+  if (mirror.isDebug) return `${mirror.hostKind} · ${describeStage()}`
   if ((await read($, isHovered)) && mirror.hoverKey === mirror.planKey) return HINTS[await read($, dock)]
 
   const shownReaction = await read($, reaction)
@@ -271,6 +271,7 @@ export const register: Register = (on, options) => {
       const held = mirror.drag?.requestId === e.requestId ? mirror.drag.catcher : undefined
       const catcher: Catcher = held ?? { top: plan.top, right: plan.at.right, height: petSize.rows }
       mirror.catcher = { requestId: e.requestId, at: catcher }
+      mirror.hostKind = e.component
 
       const row = await next(e)
 
@@ -311,6 +312,7 @@ export const register: Register = (on, options) => {
       name: look.displayName,
       badge: await read($, badge),
       status: isSaying ? `“${said.text}”` : await statusLine($),
+      statusColumns: mirror.isDebug ? 64 : 44,
     }
 
     if (isDocked) {
