@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 
 const HOME = '/Users/t'
 const PETS = `${HOME}/.codex/pets`
-const CACHE = `${HOME}/.claude/cache/pets`
+const CACHE = `${HOME}/.claude/cache/app.paulie.claude-mods.pets`
 
 const manifest = (id: string, displayName: string) =>
   JSON.stringify({ id, displayName, description: '', spritesheetPath: 'spritesheet.webp' })

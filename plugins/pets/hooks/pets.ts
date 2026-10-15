@@ -10,6 +10,10 @@ export type PetPackage = {
   spritesheet: string
 }
 
+// Ours alone, so it can't collide with another tool's cache; the pet folders
+// themselves stay Codex's format, untouched.
+const CACHE_NAMESPACE = 'app.paulie.claude-mods.pets'
+
 export type PetHomes = {
   claude: string
   codex: string
@@ -23,7 +27,7 @@ export async function homesFor($: EngineInterface): Promise<PetHomes> {
   return {
     claude: `${home}/.claude/pets`,
     codex: `${codex}/pets`,
-    cache: `${home}/.claude/cache/pets`,
+    cache: `${home}/.claude/cache/${CACHE_NAMESPACE}`,
   }
 }
 

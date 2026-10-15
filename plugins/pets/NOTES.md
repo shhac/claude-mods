@@ -7,6 +7,7 @@ What we measured building this mod against Claude Code 2.1.299 in fullscreen (cm
 - `$` can't be stored or passed around. Spell it `$.noun.method()` inside the hook. A helper that takes `$` must be a top-level `function` declaration, in this file or one it imports. An arrow const or a closure inside `register` is refused.
 - `$.state` refs (`atom({ plugin, key })`) must be declared with literals in the same file that reads or writes them, so each file declares its own atoms.
 - Plugin names can't start with `claude-`, and `claude-mods` itself is reserved.
+- There's no data folder for a mod. `$.plugin` has only `name` and `root`. `~/.claude/plugins/data/<plugin>@<marketplace>/` is removed on uninstall, but a mod can't learn its marketplace id. Our own files go under `~/.claude/cache/app.paulie.claude-mods.<mod>/`.
 - `$.clock.after` returns a `Timer`; stop it with `.cancel()`.
 - A test mounts drawings and raises events, but nothing sits beneath the plugin. The test answers every event and `$` call itself. `$`-call events (`fs.*`, `process.run`, `command.register`, `ui.blit`) answer `{ value }`; engine events answer their result directly.
 - In a test, nothing more is drawn after `$.session.end`, so test what a `/clear` changes below the hooks.

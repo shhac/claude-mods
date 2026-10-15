@@ -66,4 +66,4 @@ In fullscreen the pet floats over the conversation, starting at its bottom-right
 ## Requirements
 
 - A terminal with the kitty graphics protocol (Ghostty, kitty). Elsewhere the pet shows as its name.
-- [ImageMagick](https://imagemagick.org) or [ffmpeg](https://ffmpeg.org), used once per pet to slice the spritesheet into frames, cached in `~/.claude/cache/pets/`.
+- [ImageMagick](https://imagemagick.org) or [ffmpeg](https://ffmpeg.org), used once per pet to slice the spritesheet into frames, cached in `~/.claude/cache/app.paulie.claude-mods.pets/`. Your pet folders are never changed.
