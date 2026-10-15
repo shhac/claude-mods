@@ -57,6 +57,26 @@ test('the pet is held inside the content and the screen', () => {
   expect(clampOffset({ right: -3, lift: -3 }, PET, 42)).toEqual({ right: 0, lift: 0 })
 })
 
+test('the pet can go below the last row we know of, over notices no hook sees', () => {
+  // 42 rows known of a 51-row conversation that fills the screen: 9 below.
+  measuredScreen()
+
+  const plan = planFor({ right: 0, lift: -100 }, PET)
+  expect(plan?.at.lift).toBe(-9)
+  expect(plan?.host).toBe('took')
+  // Under the host's last line; no row there can lay a catcher.
+  expect(plan?.top).toBe(1 + 9 - 4 + 1)
+  expect([...(plan?.catchers.keys() ?? [])]).toEqual([])
+})
+
+test("a short conversation keeps the pet above its last row: the logo's height isn't known", () => {
+  forgetRows()
+  noteBottomSlot(59, 194, 21)
+  noteRow('reply', { first: 0, last: 9, of: 10 })
+
+  expect(planFor({ right: 0, lift: -100 }, PET)?.at.lift).toBe(0)
+})
+
 test('a row revealed above by a scroll goes on top, not at the bottom', () => {
   forgetRows()
   noteBottomSlot(59, 194, 21)

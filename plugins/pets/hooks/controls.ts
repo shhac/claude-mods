@@ -6,7 +6,7 @@ import { columnsForRows } from './atlas'
 import { petted } from './care'
 import { tend } from './keeper'
 import { react, steer } from './player'
-import { forgetRows, planFor, screen } from './stage'
+import { belowRows, forgetRows, planFor, screen } from './stage'
 import type { Size } from './stage'
 
 // Moving the pet, resizing it and docking it, by drag, click or command.
@@ -165,8 +165,9 @@ export async function dragPet($: EngineInterface, requestId: string, gesture: st
 }
 
 // The pet dragged by the footer caption: its middle follows the pointer, which
-// counts up from the footer; the conversation's bottom row sits the prompt
-// area's height above it.
+// counts up from the footer. The conversation's bottom sits the prompt area's
+// height above it, and lift 0, the last row we know of, is higher by the rows
+// no hook sees.
 export async function aimPet($: EngineInterface, requestId: string, aim: { fromRight: number; up: number }, isDrop: boolean) {
   if (mirror.dock !== 'conversation') await setDock($, 'conversation')
 
@@ -176,7 +177,7 @@ export async function aimPet($: EngineInterface, requestId: string, aim: { fromR
 
   const wanted = {
     right: aim.fromRight - Math.floor(petSize.columns / 2),
-    lift: aim.up - (screen.promptRows - 1) - Math.floor(petSize.rows / 2),
+    lift: aim.up - (screen.promptRows - 1) - Math.floor(petSize.rows / 2) - belowRows(),
   }
   await moveTo($, drag, wanted, isDrop)
 }

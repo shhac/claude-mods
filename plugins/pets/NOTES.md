@@ -93,6 +93,7 @@ A second Claude Code window (`claude --plugin-dir`) can be read with `cmux read-
 - **`overflow: hidden` crops a picture.** A 2-row box holding a 4-row `Image` shifted up with `marginTop: -1` drew exactly image rows 1 and 2. Negative margins work.
 - **Rows tile the conversation with no gaps.** A reply reported `{ first: 51, last: 90, of: 91 }` and covered screen lines 0–39; the "Cogitated" line `{ 0, 1, 2 }` covered 40–41. Row 0 of a message is the blank line above it, inside `next(e)`.
 - **Some rows aren't hookable.** The `pets: reloaded` notices are drawn below the last row but no hook sees them, so the bottom of the last hooked row isn't always the bottom of the conversation.
+- **Those rows are still in the conversation's region.** A pet hung six rows below the last hooked row drew there, and a reload notice printed after it overwrote the picture only in the cells it had text in (a long line cut a whole image row; a short line's tail left the image showing). Where the conversation fills the screen, the rows under the last hooked row are the conversation's height less the rows we know.
 - After a hot reload the rows already on screen keep their old drawing until something redraws them; `session.start` calls `$.ui.invalidate('ui.render')`.
 
 ## Grabbing the pet

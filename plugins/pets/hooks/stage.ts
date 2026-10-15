@@ -130,10 +130,30 @@ export function layout(): readonly Placed[] | undefined {
   }))
 }
 
-export const clampOffset = (wanted: Offset, size: Size, lines: number): Offset => ({
-  right: Math.round(Math.min(Math.max(wanted.right, 0), Math.max(0, screen.columns - size.columns))),
-  lift: Math.round(Math.min(Math.max(wanted.lift, 0), Math.max(0, lines - size.rows))),
-})
+// `below` rows under the last row we know of can take the pet too: a negative
+// lift.
+export function clampOffset(wanted: Offset, size: Size, lines: number, below = 0): Offset {
+  // Not -0, which a saved offset would carry around.
+  const lowest = below > 0 ? -below : 0
+  return {
+    right: Math.round(Math.min(Math.max(wanted.right, 0), Math.max(0, screen.columns - size.columns))),
+    lift: Math.round(Math.min(Math.max(wanted.lift, lowest), Math.max(lowest, lines - size.rows))),
+  }
+}
+
+const totalOf = (rows: readonly Placed[]) => rows.reduce((sum, row) => sum + row.lines, 0)
+
+// Rows under the last row a hook sees: notices no hook is told of (a reload, a
+// recap, a drafted bug report), still in the conversation. They can only be
+// counted where the conversation fills the screen, its top row cut; with
+// the logo above a short one, the pet could be pushed off the bottom.
+function belowOf(rows: readonly Placed[] | undefined) {
+  const top = rows?.at(-1)
+  if (rows === undefined || top === undefined || !isCutAtTop(top.seen)) return 0
+  return Math.max(0, screen.conversationRows - totalOf(rows))
+}
+
+export const belowRows = () => belowOf(layout())
 
 // Where the pet's lines `[lift, lift + rows)`, counted up from the content's
 // bottom, cross each row's own lines.
@@ -176,8 +196,8 @@ export function planFor(wanted: Offset, size: Size): Plan | undefined {
   const host = rows?.[0] ?? bottomRow()
   if (host === undefined) return undefined
 
-  const lines = rows === undefined ? screen.conversationRows : rows.reduce((sum, row) => sum + row.lines, 0)
-  const at = clampOffset(wanted, size, lines)
+  const lines = rows === undefined ? screen.conversationRows : totalOf(rows)
+  const at = clampOffset(wanted, size, lines, belowOf(rows))
   const plan = {
     at,
     host: host.requestId,
