@@ -80,6 +80,9 @@ export function codexHome(on: On) {
   return { slicedWith, clock, saved }
 }
 
+// A session as every test starts one: interactive, in a terminal.
+export const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const
+
 export const pet = (args: string) => ({
   command: 'pet',
   args,

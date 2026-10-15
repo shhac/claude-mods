@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { BAND, BAND_PLACEMENT, CACHE, codexHome, pet, PETS } from './harness'
+import { BAND, BAND_PLACEMENT, CACHE, codexHome, pet, PETS, SESSION } from './harness'
 
 describe('the pet band: placement, commands and chatter', () => {
   test("shows the pet Codex has chosen, sliced into frames", BAND_PLACEMENT, async ($, on) => {
     const { slicedWith } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
 
     const ui = await $.ui.mount(BAND)
 
@@ -27,7 +27,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('follows the turn: running, then a tool, then done', BAND_PLACEMENT, async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
     await clock.advance(5000)
 
@@ -48,7 +48,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('/pet switches pets and remembers the choice', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
 
     const listed = await $.command.run(pet(''))
     expect(listed.text).toContain('● nullbyte — Nullbyte')
@@ -57,7 +57,7 @@ describe('the pet band: placement, commands and chatter', () => {
     const switched = await $.command.run(pet('dawnbyte'))
     expect(switched.text).toBe('Dawnbyte is now your pet.')
 
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const relisted = await $.command.run(pet('list'))
     expect(relisted.text).toContain('● dawnbyte — Dawnbyte')
 
@@ -67,7 +67,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('/pet help says how to get a new pet', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
 
     const help = (await $.command.run(pet('help'))).text
     expect(help).toContain('/pet dock')
@@ -77,7 +77,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('/pet off hides the band', BAND_PLACEMENT, async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.command.run(pet('off'))
 
     const ui = await $.ui.mount(BAND)
@@ -89,7 +89,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('a green test run is cheered, a red one winced at', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
 
     await $.tool.call({ tool: 'Bash', tool_use_id: 'u1', command: 'cd x && bun test' })
     await $.tool.call({ tool: 'Bash', tool_use_id: 'u2', command: 'ls tests' })
@@ -107,7 +107,7 @@ describe('the pet band: placement, commands and chatter', () => {
       return { value: { isAnswered: true, text: answers[asked.length - 1] ?? 'hm', usage } }
     })
     on('prompt.submit', ($, e) => ({ text: e.text }))
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
     const said = async (line: string) => ui.find({ type: 'Text', text: line })
 
@@ -134,7 +134,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('while Claude thinks quietly, the pet muses', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
 
     await $.turn.start({ text: 'hi', turnId: 't1' })
@@ -156,7 +156,7 @@ describe('the pet band: placement, commands and chatter', () => {
       asked.push(e.prompt)
       return { deny: 'not in this test' }
     })
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(BAND)
 
     await $.tool.call({ tool: 'Bash', tool_use_id: 'u1', command: 'git hunk list' })
@@ -167,7 +167,7 @@ describe('the pet band: placement, commands and chatter', () => {
   test('with chatter on, a failed model call falls back to the pet’s own line', BAND_PLACEMENT, async ($, on) => {
     codexHome(on)
     on('model.complete', () => ({ deny: 'offline' }))
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
 
     await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/a.ts' })
@@ -182,7 +182,7 @@ describe('the pet band: placement, commands and chatter', () => {
       const usage = { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
       return { value: { isAnswered: true, text: 'ooh, from the model', usage } }
     })
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
 
     await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/a.ts' })
@@ -197,7 +197,7 @@ describe('the pet band: placement, commands and chatter', () => {
 
   test('a bubble goes after 8 s; a newer one keeps its own time', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     const ui = await $.ui.mount(BAND)
     const shows = async (text: RegExp) => (await ui.find({ type: 'Text', text })) !== undefined
     const feeling = /what’s in there|read that one|nosing around|so many files/

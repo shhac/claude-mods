@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { codexHome, conversationRow, FLOATING_BAND, FOOTER, pet } from './harness'
+import { codexHome, conversationRow, FLOATING_BAND, FOOTER, pet, SESSION } from './harness'
 
 describe('the pet floating over the conversation', () => {
   test('floats over the conversation, riding the row that starts the viewport', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
 
     const footer = await $.ui.mount(FOOTER)
@@ -23,7 +23,7 @@ describe('the pet floating over the conversation', () => {
 
   test('the pet itself is the handle: drag it anywhere over the conversation', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const boxes = async () => (await host.findAll({ type: 'Box' })).filter(box => box.props.position === 'absolute')
@@ -54,7 +54,7 @@ describe('the pet floating over the conversation', () => {
 
   test("the host row's box stretches up over the pet, so its catcher can be reached", async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const reply = conversationRow('reply', 5)
     await $.ui.mount({ ...reply, props: { ...reply.props, onScreen: { first: 5, last: 44, of: 45 } } })
@@ -77,7 +77,7 @@ describe('the pet floating over the conversation', () => {
 
   test('the footer caption drags the pet down as well as up, and a click leaves it be', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
@@ -101,7 +101,7 @@ describe('the pet floating over the conversation', () => {
 
   test('a click pets it, a right click opens its menu, a double click docks it on the prompt', async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
@@ -162,7 +162,7 @@ describe('the pet floating over the conversation', () => {
 
   test('the pointer over the pet lights it up and says what it can do', async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
@@ -187,7 +187,7 @@ describe('the pet floating over the conversation', () => {
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
 
     const older = await $.ui.mount({ ...conversationRow('row-1', 0), props: { text: 'a', isFirstOfReply: true, onScreen: { first: 0, last: 9, of: 10 } } })
@@ -200,7 +200,7 @@ describe('the pet floating over the conversation', () => {
 
   test('a longer prompt pulls the pet back inside the shrunken conversation', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const floating = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')

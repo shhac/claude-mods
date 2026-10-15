@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { codexHome, conversationRow, FLOATING_BAND, FOOTER, pet } from './harness'
+import { codexHome, conversationRow, FLOATING_BAND, FOOTER, pet, SESSION } from './harness'
 
 describe("the pet's menu, fetch and tricks", () => {
   test('the menu pats, feeds, closes when left, and opens above the prompt when docked', async ($, on) => {
     const { clock } = codexHome(on)
     on('ui.toast', () => ({ value: undefined }))
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
@@ -42,7 +42,7 @@ describe("the pet's menu, fetch and tricks", () => {
 
   test('the menu opens on actions, with pages for stats, achievements and config', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const shows = async (text: RegExp) => (await host.find({ type: 'Text', text, in: 'menu' })) !== undefined
@@ -62,7 +62,7 @@ describe("the pet's menu, fetch and tricks", () => {
 
   test('fetch: the pet runs to the far side and back, and is a little tired after', async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const host = await $.ui.mount(conversationRow('row-1', 5))
     const right = async () => (await host.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')?.props.right
@@ -79,7 +79,7 @@ describe("the pet's menu, fetch and tricks", () => {
 
   test('tricks wait for their level', async ($, on) => {
     codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const host = await $.ui.mount(conversationRow('row-1', 5))
 
@@ -92,7 +92,7 @@ describe("the pet's menu, fetch and tricks", () => {
 
   test('docking the pet mid-fetch ends the game; docked, it fetches on the spot', async ($, on) => {
     const { clock } = codexHome(on)
-    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.session.start(SESSION)
     await $.ui.mount(FLOATING_BAND)
     const footer = await $.ui.mount(FOOTER)
     const host = await $.ui.mount(conversationRow('row-1', 5))
