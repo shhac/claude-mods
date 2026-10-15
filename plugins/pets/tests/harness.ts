@@ -27,8 +27,8 @@ function sharedStore(on: On, saved: Map<string, unknown>) {
 }
 
 // A Codex home with two pets, Codex set to the second, and slicing that works;
-// its store shared with another session when given one.
-export function codexHome(on: On, saved?: Map<string, unknown>) {
+// its store is handed back, for a test to play another session with.
+export function codexHome(on: On) {
   const files = new Map<string, string>([
     [`${HOME}/.codex/config.toml`, 'pet = "custom:nullbyte"\n'],
     [`${PETS}/dawnbyte/pet.json`, manifest('dawnbyte', 'Dawnbyte')],
@@ -39,8 +39,8 @@ export function codexHome(on: On, saved?: Map<string, unknown>) {
   const slicedWith: string[] = []
 
   mock.env(on, { HOME })
-  if (saved === undefined) mock.store(on)
-  else sharedStore(on, saved)
+  const saved = new Map<string, unknown>()
+  sharedStore(on, saved)
   // A real-looking now: a fresh pet's first treat isn't half an hour after 1970.
   const clock = mock.clock(on, { now: Date.UTC(2026, 9, 15, 12) })
 
@@ -77,7 +77,7 @@ export function codexHome(on: On, saved?: Map<string, unknown>) {
     return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
 
-  return { slicedWith, clock }
+  return { slicedWith, clock, saved }
 }
 
 export const pet = (args: string) => ({
