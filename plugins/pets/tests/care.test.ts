@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { afterTool, afterTurn, badgeOf, careFrom, fed, levelOf, newCare, welcomeBack } from '../hooks/care'
+import { afterTool, afterTurn, badgeOf, careFrom, fed, levelOf, milestone, newCare, welcomeBack } from '../hooks/care'
 import { fitBubble, toolLine } from '../hooks/chatter'
 
 const HOUR = 60 * 60 * 1000
@@ -33,6 +33,13 @@ describe('looking after the pet', () => {
 
     const again = 'care' in first ? fed(first.care, NOW + 10 * 60 * 1000) : first
     expect(again).toEqual({ waitMinutes: 20 })
+  })
+
+  test('milestones are cheered once, as they are crossed', () => {
+    const care = { ...newCare(NOW), turns: 9, tools: 99 }
+    expect(milestone(care, afterTurn(care, NOW))).toBe('10 replies watched together!')
+    expect(milestone(care, afterTool(care, false))).toBe("100 tool calls! I'm learning so much")
+    expect(milestone(afterTurn(care, NOW), afterTurn(afterTurn(care, NOW), NOW))).toBeUndefined()
   })
 
   test('the badge shows the level and mood hearts', () => {

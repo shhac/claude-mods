@@ -1,7 +1,7 @@
 import { atom, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import { badgeOf, careFrom, levelOf, welcomeBack } from './care'
+import { badgeOf, careFrom, levelOf, milestone, welcomeBack } from './care'
 import type { Care } from './care'
 import { react } from './player'
 import { say } from './voice'
@@ -24,7 +24,8 @@ export async function loadCare($: EngineInterface, petId: string) {
   return care
 }
 
-// Applies a change to the pet's care and saves it; a new level is celebrated.
+// Applies a change to the pet's care and saves it; a new level or a
+// milestone is celebrated.
 export async function tend($: EngineInterface, change: (care: Care, now: number) => Care) {
   const { petId, care } = keeper
   if (petId === undefined || care === undefined) return undefined
@@ -36,9 +37,10 @@ export async function tend($: EngineInterface, change: (care: Care, now: number)
   await update($, badge, () => badgeOf(next))
 
   const level = levelOf(next.xp)
-  if (level > levelOf(care.xp)) {
+  const cheer = level > levelOf(care.xp) ? `Level ${level}! ✨` : milestone(care, next)
+  if (cheer !== undefined) {
     await react($, 'levelUp')
-    await say($, `Level ${level}! ✨`)
+    await say($, cheer)
   }
 
   return next

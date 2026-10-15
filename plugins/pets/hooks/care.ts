@@ -115,6 +115,18 @@ export function fed(care: Care, now: number): { care: Care } | { waitMinutes: nu
   return { care: { ...care, mood: clampMood(care.mood + 15), treats: care.treats + 1, lastFedAt: now, lastSeenAt: now } }
 }
 
+const TURN_MILESTONES = [10, 50, 100, 250, 500, 1000]
+const TOOL_MILESTONES = [100, 1000, 5000]
+
+// Something worth a cheer, crossed between one care and the next.
+export function milestone(before: Care, after: Care) {
+  const turns = TURN_MILESTONES.find(count => before.turns < count && after.turns >= count)
+  if (turns !== undefined) return `${turns} replies watched together!`
+
+  const tools = TOOL_MILESTONES.find(count => before.tools < count && after.tools >= count)
+  return tools === undefined ? undefined : `${tools} tool calls! I'm learning so much`
+}
+
 export const daysTogether = (care: Care, now: number) => Math.floor((now - care.adoptedAt) / DAY_MS) + 1
 
 export function describeCare(name: string, care: Care, now: number) {
