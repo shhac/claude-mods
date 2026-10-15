@@ -45,6 +45,7 @@ Nothing sits beside the prompt box, which always spans the full width.
 - **The pointer over a floating box lands on its parent.** A `Client` inside a floating box never gets mouse events, so the pet itself can't be grabbed.
 - A `Client` drawn in the flow does get events (`down`, `move`, `up`, with sub-cell `fine` positions on Ghostty). After a `down` it keeps every `move` until the `up`, even off its own cells, and no text gets selected. The pet's name tag in the footer is the drag handle for this reason.
 - Ghostty reports moves within a cell, so only send an update when the cell changes, or each one costs a full redraw.
+- **The pointer's shape can't be changed:** nothing in the API sets it. A catcher `Client` does get `enter` and `leave`, so the pet lights a frame and the caption shows what it can do while the pointer is over either.
 - A right click on the footer caption arrived as a click, but one on the pet's catcher over the conversation didn't. The catchers now treat any press but the left as a click at once, without waiting for its release.
 - The test harness's `find` matches on tag, key and text only, not on style props like `italic`.
 
@@ -95,6 +96,7 @@ A second Claude Code window (`claude --plugin-dir`) can be read with `cmux read-
 - **`overflow: hidden` crops a picture.** A 2-row box holding a 4-row `Image` shifted up with `marginTop: -1` drew exactly image rows 1 and 2. Negative margins work.
 - **Rows tile the conversation with no gaps.** A reply reported `{ first: 51, last: 90, of: 91 }` and covered screen lines 0–39; the "Cogitated" line `{ 0, 1, 2 }` covered 40–41. Row 0 of a message is the blank line above it, inside `next(e)`.
 - **Some rows aren't hookable.** The `pets: reloaded` notices are drawn below the last row but no hook sees them, so the bottom of the last hooked row isn't always the bottom of the conversation.
+- **Panels above the prompt aren't.** A drafted bug report's box and the `Update installed` line sit in the bottom slot with the prompt: the band's `maxRows` shrinks by their height, and the pet stopped just above them. Dismissing the draft gives the rows back to the conversation.
 - **Those rows are still in the conversation's region.** A pet hung six rows below the last hooked row drew there, and a reload notice printed after it overwrote the picture only in the cells it had text in (a long line cut a whole image row; a short line's tail left the image showing). Where the conversation fills the screen, the rows under the last hooked row are the conversation's height less the rows we know.
 - After a hot reload the rows already on screen keep their old drawing until something redraws them; `session.start` calls `$.ui.invalidate('ui.render')`.
 
