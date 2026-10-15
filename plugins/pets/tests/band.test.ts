@@ -298,4 +298,39 @@ describe('the pet band', () => {
     expect((await floating())?.props).toMatchObject({ top: 10 })
   })
 
+  test('the pet chats: a line for each tool, a remark on each reply', BAND_PLACEMENT, async ($, on) => {
+    codexHome(on)
+    const asked: string[] = []
+    on('model.complete', ($, e) => {
+      asked.push(e.prompt)
+      const usage = { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+      return { value: { isAnswered: true, text: 'Bold of you to rewrite it all 🙃', usage } }
+    })
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+
+    await $.turn.start({ text: 'hi', turnId: 't1' })
+    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/hooks/stage.ts' })
+    expect(await ui.find({ type: 'Text', text: ' reading stage.ts ' })).toBeDefined()
+
+    await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'I rewrote it all.', durationMs: 10, isAborted: false })
+    expect(asked.at(-1)).toContain('I rewrote it all.')
+    expect(await ui.find({ type: 'Text', text: ' Bold of you to rewrite it all 🙃 ' })).toBeDefined()
+    expect((await $.command.run(pet('stats'))).text).toContain('watched 1 replies and 1 tool calls')
+  })
+
+  test('quiet chatter never asks the model', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {
+    codexHome(on)
+    const asked: string[] = []
+    on('model.complete', ($, e) => {
+      asked.push(e.prompt)
+      return { deny: 'not in this test' }
+    })
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    await $.ui.mount(BAND)
+
+    await $.tool.call({ tool: 'Bash', tool_use_id: 'u1', command: 'git hunk list' })
+    await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'Done.', durationMs: 10, isAborted: false })
+    expect(asked).toEqual([])
+  })
 })
