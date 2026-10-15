@@ -5,7 +5,7 @@ import type { MenuState } from '../types'
 import { fed, isHungry } from './care'
 import type { Care } from './care'
 import { feedPet, hidePet, patPet } from './commands'
-import { isDock, isSizeName, mirror, setDock, setSize } from './controls'
+import { PLACES, SIZE_NAMES, isDock, isSizeName, mirror, setDock, setSize } from './controls'
 import { keeper } from './keeper'
 import type { MenuRow } from './menu-rows'
 import { achievementCount } from './achievements'
@@ -100,20 +100,13 @@ function actionRows(care: Care | undefined, now: number): readonly MenuRow[] {
   ]
 }
 
-const choicesOf = <T extends string>(label: string, prefix: string, names: readonly T[], current: T, labels: Record<T, string>): MenuRow => ({
-  kind: 'choices',
-  label,
-  choices: names.map(name => ({ id: `${prefix}:${name}`, label: labels[name], isCurrent: name === current, isDisabled: false })),
-})
-
 function configRows(): readonly MenuRow[] {
+  const place = PLACES.map(one => ({ id: `place:${one.id}`, label: one.label, isCurrent: one.id === mirror.dock, isDisabled: false }))
+  const size = SIZE_NAMES.map(name => ({ id: `size:${name}`, label: name, isCurrent: name === mirror.size, isDisabled: false }))
+
   return [
-    choicesOf('Place', 'place', ['conversation', 'prompt', 'sidebar'] as const, mirror.dock, {
-      conversation: 'chat',
-      prompt: 'prompt',
-      sidebar: 'sidebar',
-    }),
-    choicesOf('Size ', 'size', ['small', 'medium', 'large'] as const, mirror.size, { small: 'small', medium: 'medium', large: 'large' }),
+    { kind: 'choices', label: 'Place', choices: place },
+    { kind: 'choices', label: 'Size ', choices: size },
     action('hide', 'Hide (/pet on brings it back)'),
     back,
   ]

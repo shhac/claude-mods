@@ -1,6 +1,7 @@
 import type { Elements, RenderElement } from 'claude-code'
 
 import type { Bubble, Dock, Sections, SizeName } from '../types'
+import { PLACES, SIZE_NAMES } from './controls'
 import { bubbleBox, picture } from './drawings'
 import type { Look } from './drawings'
 import type { AchievementLine } from './pages'
@@ -38,12 +39,6 @@ export type Press = (id: string) => void
 
 const TAIL_BELOW = { say: '▼', think: '°' } as const
 
-const PLACES: readonly { id: Dock; label: string }[] = [
-  { id: 'conversation', label: 'chat' },
-  { id: 'prompt', label: 'prompt' },
-  { id: 'sidebar', label: 'sidebar' },
-]
-const SIZES: readonly SizeName[] = ['small', 'medium', 'large']
 
 // A button, or its label dim where it can't be pressed yet.
 function button({ Button, Text }: Terminal, item: SideButton, press: Press, isCurrent = false) {
@@ -96,7 +91,7 @@ function configBody(elements: Terminal, view: SidebarView, press: Press) {
   const placeButtons = PLACES.map(place =>
     button(elements, { id: `place:${place.id}`, label: place.label, isDisabled: false }, press, place.id === view.place),
   )
-  const sizeButtons = SIZES.map(name => button(elements, { id: `size:${name}`, label: name, isDisabled: false }, press, name === view.size))
+  const sizeButtons = SIZE_NAMES.map(name => button(elements, { id: `size:${name}`, label: name, isDisabled: false }, press, name === view.size))
 
   return (
     <Box flexDirection="column" paddingLeft={2}>

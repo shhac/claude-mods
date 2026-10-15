@@ -5,7 +5,7 @@ import type { Dock } from '../types'
 import { describeAchievements } from './achievements'
 import { HOW_TO_GET_A_PET, adopt, describePets } from './adoption'
 import { describeCare, fed, petted } from './care'
-import { NEXT_SIZE, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
+import { NEXT_SIZE, PLACES, SIZE_ROWS, goHome, isSizeName, mirror, setDebug, setDock, setSize } from './controls'
 import { keeper, tend } from './keeper'
 import { findPets, homesFor } from './pets'
 import { react } from './player'
@@ -18,12 +18,8 @@ const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
 const isHidden = atom({ plugin: 'pets', key: 'isHidden' } as const, false)
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
 
-const PLACE_NAMES: Record<string, Dock | undefined> = {
-  chat: 'conversation',
-  conversation: 'conversation',
-  prompt: 'prompt',
-  sidebar: 'sidebar',
-}
+// A place by its id or the name the lists show it by (chat).
+const placeNamed = (name: string) => PLACES.find(place => place.id === name || place.label === name)?.id
 
 const PLACE_SAID: Record<Dock, string> = {
   conversation: 'Pet is back over the conversation.',
@@ -102,7 +98,7 @@ export async function petCommand($: EngineInterface, args: string) {
   }
 
   if (arg === 'dock') {
-    const named = PLACE_NAMES[value]
+    const named = placeNamed(value)
     const next = named ?? (mirror.dock === 'conversation' ? 'prompt' : 'conversation')
     if (!(await setDock($, next))) return 'No room for the sidebar in this terminal.'
     return PLACE_SAID[next]

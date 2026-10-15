@@ -24,7 +24,13 @@ const size = atom({ plugin: 'pets', key: 'size' } as const, 'medium')
 const dock = atom({ plugin: 'pets', key: 'dock' } as const, 'conversation')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)
 
-const SIZE_NAMES = new Set<string>(['small', 'medium', 'large'])
+// The sizes and places there are, in the order every list shows them.
+export const SIZE_NAMES: readonly SizeName[] = ['small', 'medium', 'large']
+export const PLACES: readonly { id: Dock; label: string }[] = [
+  { id: 'conversation', label: 'chat' },
+  { id: 'prompt', label: 'prompt' },
+  { id: 'sidebar', label: 'sidebar' },
+]
 
 export const isOffset = (value: unknown): value is Offset =>
   typeof value === 'object' &&
@@ -34,9 +40,8 @@ export const isOffset = (value: unknown): value is Offset =>
   'lift' in value &&
   typeof value.lift === 'number'
 
-export const isSizeName = (value: unknown): value is SizeName => typeof value === 'string' && SIZE_NAMES.has(value)
-export const isDock = (value: unknown): value is Dock =>
-  value === 'conversation' || value === 'prompt' || value === 'sidebar'
+export const isSizeName = (value: unknown): value is SizeName => SIZE_NAMES.some(name => name === value)
+export const isDock = (value: unknown): value is Dock => PLACES.some(place => place.id === value)
 
 // The sidebar's pane, and the width it asks for beside the conversation. The
 // id is ours alone (pane ids take no dots, so the namespace is dashed).
