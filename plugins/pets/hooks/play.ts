@@ -2,6 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { Offset, Reaction } from '../types'
 import { didTrick, isTired, levelOf, played } from './care'
+import type { Care } from './care'
 import { mirror, setOffset, sizeOf } from './controls'
 import { keeper, tend } from './keeper'
 import { react, steer } from './player'
@@ -21,13 +22,12 @@ export const TRICKS: readonly Trick[] = [
 
 const TRICK_REACTION: Record<Trick['id'], Reaction> = { wave: 'wave', jump: 'jump', dance: 'dance', read: 'read' }
 
-const levelNow = () => levelOf(keeper.care?.xp ?? 0)
-export const isUnlocked = (trick: Trick) => levelNow() >= trick.level
+export const isUnlocked = (trick: Trick, care: Care | undefined) => levelOf(care?.xp ?? 0) >= trick.level
 
 export async function doTrick($: EngineInterface, id: string) {
   const trick = TRICKS.find(one => one.id === id)
   if (trick === undefined) return
-  if (!isUnlocked(trick)) return say($, `I'll learn to ${trick.name} at level ${trick.level}!`)
+  if (!isUnlocked(trick, keeper.care)) return say($, `I'll learn to ${trick.name} at level ${trick.level}!`)
 
   await react($, TRICK_REACTION[trick.id])
   await tend($, didTrick)
@@ -42,8 +42,6 @@ const IN_PLACE_MS = 1200
 const FETCH_COOLDOWN_MS = 60 * 1000
 
 export const fetchGame: { generation: number; lastAt: number } = { generation: 0, lastAt: Number.NEGATIVE_INFINITY }
-
-export const isFetchTired = () => keeper.care !== undefined && isTired(keeper.care)
 
 export async function playFetch($: EngineInterface) {
   const care = keeper.care

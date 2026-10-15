@@ -48,7 +48,7 @@ export async function sidebarView($: EngineInterface, bodyRows: number, bodyColu
     achievementCount: care === undefined ? '' : achievementCount(care),
     sections: await read($, sections),
     actions: [patButton(care), feedButton(care, now), fetchButton(care)],
-    tricks: trickButtons(),
+    tricks: trickButtons(care),
     place: mirror.dock,
     size: mirror.size,
     said: await read($, bubble),

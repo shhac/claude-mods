@@ -1,11 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import { fed, isHungry, petted } from './care'
+import { fed, isHungry, isTired, petted } from './care'
 import type { Care } from './care'
 import { isDock, isSizeName, setDock, setSize } from './controls'
 import { tend } from './keeper'
-import { TRICKS, doTrick, isFetchTired, isUnlocked, playFetch } from './play'
+import { TRICKS, doTrick, isUnlocked, playFetch } from './play'
 import { react } from './player'
 import { say } from './voice'
 
@@ -27,15 +27,15 @@ export function feedButton(care: Care | undefined, now: number): ActionButton {
 }
 
 export function fetchButton(care: Care | undefined): ActionButton {
-  const isTooTired = isFetchTired()
+  const isTooTired = care !== undefined && isTired(care)
   return { id: 'fetch', label: isTooTired ? 'Fetch (too tired)' : '🎾 Fetch', isDisabled: care === undefined || isTooTired }
 }
 
-export const trickButtons = (): readonly ActionButton[] =>
+export const trickButtons = (care: Care | undefined): readonly ActionButton[] =>
   TRICKS.map(trick => ({
     id: `trick:${trick.id}`,
-    label: isUnlocked(trick) ? trick.name : `${trick.name}·Lv${trick.level}`,
-    isDisabled: !isUnlocked(trick),
+    label: isUnlocked(trick, care) ? trick.name : `${trick.name}·Lv${trick.level}`,
+    isDisabled: !isUnlocked(trick, care),
   }))
 
 // Resolves what to say back, for /pet.

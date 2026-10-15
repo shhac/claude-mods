@@ -59,7 +59,7 @@ const text = (label: string): MenuRow => ({ kind: 'text', label, isDim: false })
 const asRow = (button: ActionButton): MenuRow => ({ kind: 'action', ...button })
 
 function actionRows(care: Care | undefined, now: number): readonly MenuRow[] {
-  const tricks = trickButtons().map(button => ({ ...button, isCurrent: !button.isDisabled }))
+  const tricks = trickButtons(care).map(button => ({ ...button, isCurrent: !button.isDisabled }))
 
   return [
     asRow(patButton(care)),
