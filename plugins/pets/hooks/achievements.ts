@@ -3,7 +3,7 @@ import type { Care } from './care'
 
 // Things a pet earns once, each cheered as it comes and listed in its stats.
 
-export type Achievement = { id: string; name: string; hint: string; isEarned: (care: Care) => boolean }
+type Achievement = { id: string; name: string; hint: string; isEarned: (care: Care) => boolean }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'first-reply', name: 'Hello, world', hint: 'watch a first reply', isEarned: care => care.turns >= 1 },

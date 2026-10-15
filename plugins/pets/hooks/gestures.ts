@@ -51,7 +51,7 @@ export async function forgetHover($: EngineInterface) {
 }
 
 // The pointer came over a catcher or the name tag, or left it.
-export async function hover($: EngineInterface, catcher: string, isOver: boolean) {
+async function hover($: EngineInterface, catcher: string, isOver: boolean) {
   mirror.hoverKey = mirror.planKey
   if (isOver) mirror.hovering.add(catcher)
   else mirror.hovering.delete(catcher)
@@ -96,7 +96,7 @@ async function moveTo($: EngineInterface, drag: Drag, wanted: Offset, isDrop: bo
 const heldBy = (requestId: string) => (mirror.catcher?.requestId === requestId ? mirror.catcher.at : undefined)
 
 // The pet dragged by its catcher: `dx`, `dy` are the whole way from the press.
-export async function dragPet($: EngineInterface, requestId: string, gesture: string, move: { dx: number; dy: number }, isDrop: boolean) {
+async function dragPet($: EngineInterface, requestId: string, gesture: string, move: { dx: number; dy: number }, isDrop: boolean) {
   const current = mirror.drag
   const drag: Drag =
     current !== undefined && current.gesture === gesture
@@ -111,7 +111,7 @@ export async function dragPet($: EngineInterface, requestId: string, gesture: st
 // counts up from the footer. The conversation's bottom sits the prompt area's
 // height above it, and lift 0, the last row we know of, is higher by the rows
 // no hook sees.
-export async function aimPet($: EngineInterface, requestId: string, aim: { fromRight: number; up: number }, isDrop: boolean) {
+async function aimPet($: EngineInterface, requestId: string, aim: { fromRight: number; up: number }, isDrop: boolean) {
   if (mirror.dock !== 'conversation') await setDock($, 'conversation')
 
   const petSize = sizeOf(mirror.size)
@@ -127,7 +127,7 @@ export async function aimPet($: EngineInterface, requestId: string, aim: { fromR
 
 // A click on the pet pets it, one on the caption doesn't; on either, a double
 // click docks the pet on the prompt or back. (A right click opens the menu.)
-export async function click($: EngineInterface, button: unknown, isOnPet: boolean) {
+async function click($: EngineInterface, button: unknown, isOnPet: boolean) {
   if (button !== 'left') return
 
   const now = await $.clock.now()

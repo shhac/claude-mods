@@ -10,7 +10,7 @@ import { say } from './voice'
 
 // Playing with the pet: tricks it learns as it levels up, and fetch.
 
-export type Trick = { id: 'wave' | 'jump' | 'dance' | 'read'; name: string; level: number; line: string }
+type Trick = { id: 'wave' | 'jump' | 'dance' | 'read'; name: string; level: number; line: string }
 
 export const TRICKS: readonly Trick[] = [
   { id: 'wave', name: 'wave', level: 2, line: '👋 hiii' },
@@ -21,7 +21,7 @@ export const TRICKS: readonly Trick[] = [
 
 const TRICK_REACTION: Record<Trick['id'], Reaction> = { wave: 'wave', jump: 'jump', dance: 'dance', read: 'read' }
 
-export const levelNow = () => levelOf(keeper.care?.xp ?? 0)
+const levelNow = () => levelOf(keeper.care?.xp ?? 0)
 export const isUnlocked = (trick: Trick) => levelNow() >= trick.level
 
 export async function doTrick($: EngineInterface, id: string) {

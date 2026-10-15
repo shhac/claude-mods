@@ -7,7 +7,7 @@ import type { Offset } from '../types'
 // row's box is stretched over the pet too (drawings.tsx). This module works
 // out where the rows are and the pet's place on the bottom row.
 
-export type OnScreen = { first: number; last: number; of: number }
+type OnScreen = { first: number; last: number; of: number }
 export type Size = { rows: number; columns: number }
 
 type Seen = OnScreen & { order: number }
@@ -95,7 +95,7 @@ export function noteBottomSlot(rows: number, columns: number, bandMaxRows: numbe
   return hasChanged
 }
 
-export type Placed = { requestId: string; seen: Seen; fromBottom: number; lines: number }
+type Placed = { requestId: string; seen: Seen; fromBottom: number; lines: number }
 
 const linesOf = (seen: OnScreen) => seen.last - seen.first + 1
 

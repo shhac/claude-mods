@@ -24,7 +24,7 @@ export const PLACES: readonly { id: Dock; label: string }[] = [
   { id: 'sidebar', label: 'sidebar' },
 ]
 
-export const isOffset = (value: unknown): value is Offset =>
+const isOffset = (value: unknown): value is Offset =>
   typeof value === 'object' &&
   value !== null &&
   'right' in value &&

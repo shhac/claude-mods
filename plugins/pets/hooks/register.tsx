@@ -6,7 +6,7 @@ import { settleIn } from './adoption'
 import { afterTest, afterTool, afterTurn } from './care'
 import { isTestRun } from './checks'
 import { petCommand } from './commands'
-import { SIDEBAR, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
+import { HOME_OFFSET, SIDEBAR, isSizeName, mirror, resetControls, settleDock, sizeOf } from './controls'
 import type { Catcher } from './controls'
 import { bandFigure, footerWithPet, rowWithMenu, rowWithPet } from './drawings'
 import type { Look, RowShare } from './drawings'
@@ -29,7 +29,7 @@ import type { Chatter } from './voice'
 
 // The validator reads state refs per file, so each file declares the atoms it uses.
 const problem = atom({ plugin: 'pets', key: 'problem' } as const, null)
-const offset = atom({ plugin: 'pets', key: 'offset' } as const, { right: 0, lift: 0 })
+const offset = atom({ plugin: 'pets', key: 'offset' } as const, HOME_OFFSET)
 const bubble = atom({ plugin: 'pets', key: 'bubble' } as const, null)
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 const isHovered = atom({ plugin: 'pets', key: 'isHovered' } as const, false)

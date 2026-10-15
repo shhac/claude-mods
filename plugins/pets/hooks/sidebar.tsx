@@ -35,7 +35,7 @@ export type SidebarView = {
 }
 
 // What a press does, by the id of the button pressed.
-export type Press = (id: string) => void
+type Press = (id: string) => void
 
 const TAIL_BELOW = { say: '▼', think: '°' } as const
 

@@ -28,9 +28,6 @@ export type Dock = 'conversation' | 'prompt' | 'sidebar'
 // Which of the sidebar's folding sections are open.
 export type Sections = { achievements: boolean; config: boolean; actions: boolean }
 
-// The right-click menu: shut, showing, or drawn blank a moment as it goes.
-export type MenuState = 'closed' | 'open' | 'fading'
-
 // Said aloud, or only thought (Claude is quiet, the pet's mind wanders).
 export type BubbleKind = 'say' | 'think'
 

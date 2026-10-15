@@ -118,7 +118,7 @@ function achievementsFrom(stored: unknown): Record<string, number> {
 }
 
 export const levelOf = (xp: number) => Math.floor(Math.sqrt(xp / 10)) + 1
-export const heartsOf = (mood: number) => Math.min(5, Math.max(0, Math.round(mood / 20)))
+const heartsOf = (mood: number) => Math.min(5, Math.max(0, Math.round(mood / 20)))
 
 export const heartsLine = (mood: number) => {
   const hearts = heartsOf(mood)

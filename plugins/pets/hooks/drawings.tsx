@@ -80,11 +80,11 @@ const TAIL: Record<BubbleKind, { toRight: string; toLeft: string }> = {
   think: { toRight: '∘°', toLeft: '°∘' },
 }
 
-export type BubbleShape = { lines: readonly string[]; columns: number; rows: number; tail: number }
+type BubbleShape = { lines: readonly string[]; columns: number; rows: number; tail: number }
 
 // The bubble's size on screen: its wrapped text in a rounded border with a
 // column of padding each side, and its tail.
-export function shapeOf(bubble: Bubble): BubbleShape {
+function shapeOf(bubble: Bubble): BubbleShape {
   const lines = wrapBubble(bubble.text)
   const widest = Math.max(0, ...lines.map(line => line.length))
   const tail = TAIL[bubble.kind].toRight.length
@@ -107,7 +107,7 @@ const blankCells = ({ Box, Text }: Terminal, columns: number, rows: number) => (
 
 // The bubble with its tail toward the pet: on its right or left, or, with
 // the pet below it, none at its side (the sidebar draws one under it).
-export type TailSide = 'right' | 'left' | 'below'
+type TailSide = 'right' | 'left' | 'below'
 
 export function bubbleBox(elements: Terminal, bubble: Bubble, side: TailSide) {
   const { Box, Text } = elements
@@ -136,7 +136,7 @@ export function bubbleBox(elements: Terminal, bubble: Bubble, side: TailSide) {
   )
 }
 
-export type Caption = { badge: string; status: string; said: Bubble | null }
+type Caption = { badge: string; status: string; said: Bubble | null }
 
 // Right-aligned in the band, the caption on the pet's left facing the screen.
 export const bandFigure = (elements: Terminal, look: Look, caption: Caption, petSize: Size, width: number) => {
@@ -285,10 +285,10 @@ export function rowWithMenu(elements: Terminal, row: RenderElement, plan: Plan, 
   ])
 }
 
-export type Docked = { top: number; look: Look; petSize: Size; isLit: boolean }
+type Docked = { top: number; look: Look; petSize: Size; isLit: boolean }
 
 // Docked or not, while a drag that began on the docked pet runs.
-export type DockCatcher = { top: number; petSize: Size; isOutlined: boolean }
+type DockCatcher = { top: number; petSize: Size; isOutlined: boolean }
 
 // The footer: the engine's modes and any other mod's keep their place left of
 // the caption; docked on the prompt, the picture hangs from here over the

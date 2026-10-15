@@ -6,7 +6,7 @@ import { fieldOf } from './fields'
 // Three lines of the bubble.
 const MAX_BUBBLE = 84
 // The bubble's text wraps at this width, inside its border and padding.
-export const BUBBLE_TEXT_COLUMNS = 28
+const BUBBLE_TEXT_COLUMNS = 28
 
 export const fitBubble = (text: string) => {
   const line = text.replace(/\s+/g, ' ').trim().replace(/^["'“]|["'”]$/g, '')

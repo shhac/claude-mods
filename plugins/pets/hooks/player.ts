@@ -116,7 +116,7 @@ async function loop($: EngineInterface, generation: number) {
 }
 
 // Shows the current frame now and carries on from it, cutting short any wait.
-export function wake($: EngineInterface) {
+function wake($: EngineInterface) {
   playback.wait?.cancel()
   playback.generation += 1
   void loop($, playback.generation)

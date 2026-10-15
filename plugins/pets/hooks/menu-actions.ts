@@ -1,6 +1,5 @@
 import type { EngineInterface, Timer } from 'claude-code'
 
-import type { MenuState } from '../types'
 import { achievementCount } from './achievements'
 import { act, feedButton, fetchButton, patButton, trickButtons } from './actions'
 import type { ActionButton } from './actions'
@@ -14,6 +13,9 @@ import { achievementLines, headerLine, statsLines } from './pages'
 // The pet's right-click menu: what it offers, when it closes, and what a
 // pick does.
 
+// Shut, showing, or drawn blank a moment as it goes.
+type MenuState = 'closed' | 'open' | 'fading'
+
 // Untouched this long, the menu closes; left by the pointer, sooner.
 const IDLE_MS = 10000
 const LEFT_MS = 1500
@@ -22,7 +24,7 @@ const FADE_MS = 400
 
 // Kept out of the session's state: only the host row draws the menu, and a
 // row that read an atom would redraw on every change of it.
-export const menuMirror: { state: MenuState; page: MenuPage; rows: readonly MenuRow[]; timer: Timer | undefined } = {
+const menuMirror: { state: MenuState; page: MenuPage; rows: readonly MenuRow[]; timer: Timer | undefined } = {
   state: 'closed',
   page: 'actions',
   rows: [],
@@ -46,7 +48,7 @@ function setMenu($: EngineInterface, state: MenuState) {
   $.ui.invalidate('ui.render')
 }
 
-export type MenuPage = 'actions' | 'stats' | 'achievements' | 'config'
+type MenuPage = 'actions' | 'stats' | 'achievements' | 'config'
 const PAGES = new Set<string>(['actions', 'stats', 'achievements', 'config'])
 const isPage = (value: string): value is MenuPage => PAGES.has(value)
 
@@ -98,7 +100,7 @@ function closeIn($: EngineInterface, ms: number) {
 }
 
 // It opens on the actions; the other pages are a pick away.
-export async function openMenu($: EngineInterface, page: MenuPage = 'actions') {
+async function openMenu($: EngineInterface, page: MenuPage = 'actions') {
   menuMirror.page = page
   menuMirror.rows = await rowsNow($, page)
   setMenu($, 'open')
