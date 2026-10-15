@@ -40,27 +40,57 @@ async function switchPet($: EngineInterface, id: string) {
   return `${chosen.displayName} is now your pet.`
 }
 
+const HELP = [
+  '/pet                 the pets found; /pet <id> switches',
+  '/pet on | off        show or hide the pet',
+  '/pet home            back to its corner',
+  '/pet size [name]     small, medium or large; cycles without a name',
+  '/pet dock [place]    chat, prompt or sidebar; toggles chat and prompt',
+  '/pet stats | feed | pat',
+  '/pet debug           show where the pet can be grabbed',
+  '',
+  'On the pet: drag to move, click to pet, double-click to dock, right-click for its menu',
+  '(feed, fetch, tricks as it levels up, size, stats).',
+  '',
+  HOW_TO_GET_A_PET,
+].join('\n')
+
+const CARE_COMMANDS = new Set(['stats', 'feed', 'pat'])
+
+async function dockCommand($: EngineInterface, value: string) {
+  const next = placeNamed(value) ?? (mirror.dock === 'conversation' ? 'prompt' : 'conversation')
+  if (!(await setDock($, next))) return 'No room for the sidebar in this terminal.'
+  return PLACE_SAID[next]
+}
+
+async function debugCommand($: EngineInterface) {
+  await setDebug($, !mirror.isDebug)
+  if (!mirror.isDebug) return 'Grab areas hidden again.'
+  return `Grab areas outlined; the footer shows what the pet knows of the screen.\n${describeStage()}`
+}
+
+// Stats, a treat or a pat, for the pet on screen.
+async function careCommand($: EngineInterface, arg: string) {
+  const current = await read($, pet)
+  const care = keeper.care
+  if (current === null || care === undefined) return 'No pet here yet.'
+
+  if (arg === 'feed') return feedPet($, current.displayName)
+  if (arg === 'pat') {
+    await patPet($)
+    return `${current.displayName} wiggles happily.`
+  }
+  return `${describeCare(current.displayName, care, await $.clock.now())}\n${describeAchievements(care)}`
+}
+
 export async function petCommand($: EngineInterface, args: string) {
   const [arg = '', value = ''] = args.trim().split(/\s+/)
 
   if (arg === '' || arg === 'list') return describePets($, await homesFor($))
-
-  if (arg === 'help') {
-    return [
-      '/pet                 the pets found; /pet <id> switches',
-      '/pet on | off        show or hide the pet',
-      '/pet home            back to its corner',
-      '/pet size [name]     small, medium or large; cycles without a name',
-      '/pet dock [place]    chat, prompt or sidebar; toggles chat and prompt',
-      '/pet stats | feed | pat',
-      '/pet debug           show where the pet can be grabbed',
-      '',
-      'On the pet: drag to move, click to pet, double-click to dock, right-click for its menu',
-      '(feed, fetch, tricks as it levels up, size, stats).',
-      '',
-      HOW_TO_GET_A_PET,
-    ].join('\n')
-  }
+  if (arg === 'help') return HELP
+  if (arg === 'dock') return dockCommand($, value)
+  if (arg === 'debug') return debugCommand($)
+  if (CARE_COMMANDS.has(arg)) return careCommand($, arg)
 
   if (arg === 'home') {
     await goHome($)
@@ -73,39 +103,10 @@ export async function petCommand($: EngineInterface, args: string) {
     return `Pet is ${next} now (${SIZE_ROWS[next]} rows).`
   }
 
-  if (arg === 'dock') {
-    const named = placeNamed(value)
-    const next = named ?? (mirror.dock === 'conversation' ? 'prompt' : 'conversation')
-    if (!(await setDock($, next))) return 'No room for the sidebar in this terminal.'
-    return PLACE_SAID[next]
-  }
-
-  if (arg === 'debug') {
-    await setDebug($, !mirror.isDebug)
-    return mirror.isDebug
-      ? `Grab areas outlined; the footer shows what the pet knows of the screen.\n${describeStage()}`
-      : 'Grab areas hidden again.'
-  }
-
   if (['off', 'hide', 'on', 'show'].includes(arg)) {
     const isOff = arg === 'off' || arg === 'hide'
     await hidePet($, isOff)
     return isOff ? 'Pet hidden. /pet on brings it back.' : 'Pet is back.'
-  }
-
-  const current = await read($, pet)
-  const isCare = arg === 'stats' || arg === 'feed' || arg === 'pat'
-  if (isCare && (current === null || keeper.care === undefined)) return 'No pet here yet.'
-
-  if (arg === 'stats' && current !== null && keeper.care !== undefined) {
-    return `${describeCare(current.displayName, keeper.care, await $.clock.now())}\n${describeAchievements(keeper.care)}`
-  }
-
-  if (arg === 'feed' && current !== null) return feedPet($, current.displayName)
-
-  if (arg === 'pat' && current !== null) {
-    await patPet($)
-    return `${current.displayName} wiggles happily.`
   }
 
   return switchPet($, arg)
