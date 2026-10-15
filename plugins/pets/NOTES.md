@@ -85,3 +85,21 @@ What a wider search turned up (October 2026), beyond pets:
 - **The mouse settings matter:**
   - `CLAUDE_CODE_DISABLE_MOUSE_CLICKS=1` also turns off motion tracking, so dragging never moves ([#101046](https://github.com/anthropics/claude-code/issues/101046)).
   - In Orca and xterm.js terminals, clicks land a few columns right of the pointer once a `Client` listens ([#100654](https://github.com/anthropics/claude-code/issues/100654)).
+
+## Measured in a second session
+
+A second Claude Code window (`claude --plugin-dir`) can be read with `cmux read-screen`. Kitty image cells come out as Unicode placeholders (U+10EEEE plus diacritics for the image row and column), so the screen text shows exactly which cells the picture covers. Resizing the window makes it redraw and pick up a reload.
+
+- **`overflow: hidden` crops a picture.** A 2-row box holding a 4-row `Image` shifted up with `marginTop: -1` drew exactly image rows 1 and 2. Negative margins work.
+- **Rows tile the conversation with no gaps.** A reply reported `{ first: 51, last: 90, of: 91 }` and covered screen lines 0–39; the "Cogitated" line `{ 0, 1, 2 }` covered 40–41. Row 0 of a message is the blank line above it, inside `next(e)`.
+- **Some rows aren't hookable.** The `pets: reloaded` notices are drawn below the last row but no hook sees them, so the bottom of the last hooked row isn't always the bottom of the conversation.
+- After a hot reload the rows already on screen keep their old drawing until something redraws them; `session.start` calls `$.ui.invalidate('ui.render')`.
+
+## Grabbing the pet
+
+The picture hangs whole from the bottom-most row, which redraws on every scroll, so it never tears. The pointer can't reach it there, outside its row's own box. So every row the pet overlaps also lays an invisible `Client` catcher over its own share of the pet, inside its own box (`stage.ts` works out the shares from the rows' `onScreen` reports, in the order they arrived).
+
+- A drag holds its catcher still until the drop, so the pointer's place in the region stays a place on screen and the capture survives the pet moving away from that row.
+- Every post carries the whole way from the press: a later post in the same frame replaces an undelivered one.
+- A drag whose release never comes (its row went away) ends after 1.5 s.
+- Middle rows don't redraw on scroll, so a catcher can lag a row behind until the next redraw; only grabbing is affected, not the picture.

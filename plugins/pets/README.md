@@ -1,6 +1,6 @@
 # pets
 
-A pet that lives above the Claude Code prompt and reacts to what Claude is doing.
+A pet that floats over your Claude Code conversation, reacts to what Claude is doing, chats a little, and grows as you work together.
 
 Pets use the **Codex pet format**, so the pets you already have in Codex show up here unchanged, and a pet made for one works in both.
 
@@ -24,6 +24,7 @@ See the [repo README](../../README.md) for scopes, updating and removing.
 | being dragged | `running-left` / `running-right` | |
 | hit an error | `failed` | Blocked |
 | starting a session, or a new pet | `waving` | Hello! |
+| petted, fed, or levelling up | `jumping` | ♥ / Level up! |
 
 ## Pets
 
@@ -47,23 +48,49 @@ The spritesheet is Codex's atlas: a 1536×1872 PNG or WebP, 8 columns × 9 rows 
 
 Until you pick one, you get the pet Codex is set to (`pet = "custom:<id>"` in `~/.codex/config.toml`).
 
+## Playing with it
+
+In fullscreen the pet floats over the conversation, starting at its bottom-right corner.
+
+| Do this to the pet | It does |
+| --- | --- |
+| drag it | moves anywhere over the conversation (remembered) |
+| click | it likes being petted |
+| double click | hops onto the right end of the prompt box, or back |
+| right click | small → medium → large |
+
+The name tag in the footer (bottom right) works too: drag it and the pet follows the pointer, double click to dock it, right click to resize. If grabbing the pet ever misses, the tag always works.
+
+## Chatter
+
+A speech bubble beside the pet says what Claude is up to (`reading stage.ts`, `searching for TODO`). Shell commands without a description get a one-line summary from Haiku, and when a reply lands the pet makes a short, cute, slightly snarky remark about it, also from Haiku. Set `chatter` to `quiet` to keep the tool lines without any model calls, or `off` for no bubble.
+
+## Looking after it
+
+The pet levels up as it watches you work (replies and tool calls earn xp), likes being petted and fed, and keeps a streak of the days you visit. Its mood drifts down a little while you're away but never drops below a floor, and failures only dent it. The footer shows its level and mood hearts: `Dawnbyte Lv3 ♥♥♥♥♡`. Each pet keeps its own stats.
+
 ## Commands
 
 - `/pet` or `/pet list`: the pets found, current one marked
 - `/pet <id>`: switch pets (remembered across sessions)
 - `/pet off` / `/pet on`: hide or show the pet
-- `/pet home`: put the pet back in its corner
+- `/pet home`: back to its corner over the conversation
+- `/pet size [small|medium|large]`: set the size, or cycle it
+- `/pet dock`: over the prompt box, or back over the conversation
+- `/pet stats`: level, mood, streak and what it has watched
+- `/pet feed`: a treat, at most every half hour
+- `/pet pat`: pet it from the keyboard
 
-## Placement
+## Options
 
-In fullscreen the pet floats over the conversation, starting at its bottom-right. Its name tag sits in the footer at the bottom right; drag the name tag to move the pet anywhere over the conversation. The position is remembered. A floating box never receives the mouse, so the name tag is the handle rather than the pet itself.
+In `/config`:
 
-`/config` options:
-
-- `placement`: `float` (default) or `band`, the pet in its own rows above the prompt, right-aligned
-- `size`: the pet's height in terminal rows (default 4)
+- `placement`: `float` (default), over the conversation or the prompt box; or `band`, the pet in its own rows above the prompt, right-aligned
+- `size`: the starting size, `small` (3 rows), `medium` (4, default) or `large` (6)
+- `chatter`: `on` (default), `quiet` or `off`
 
 ## Requirements
 
 - A terminal with the kitty graphics protocol (Ghostty, kitty). Elsewhere the pet shows as its name.
+- Fullscreen mode and mouse clicks on (not `CLAUDE_CODE_DISABLE_MOUSE_CLICKS`) for dragging and clicking.
 - [ImageMagick](https://imagemagick.org) or [ffmpeg](https://ffmpeg.org), used once per pet to slice the spritesheet into frames, cached in `~/.claude/cache/app.paulie.claude-mods.pets/`. Your pet folders are never changed.
