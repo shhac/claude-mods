@@ -1,5 +1,8 @@
 import type { Elements, RenderElement } from 'claude-code'
 
+import type { Bubble, BubbleKind } from '../types'
+import { wrapBubble } from './chatter'
+
 import type { Catcher } from './controls'
 import type { GripProps } from './grip'
 import type { HandleProps } from './handle'
@@ -37,16 +40,59 @@ const catcherOver = ({ Client }: Terminal, columns: number, rows: number) => (
   />
 )
 
-const speech = ({ Text }: Terminal, said: string) =>
-  said.trim() === '' ? (
-    <Text>{said}</Text>
-  ) : (
-    <Text color="inverseText" backgroundColor="claude">
-      {said}
-    </Text>
-  )
+// A tail on the bubble's side toward the pet: a pointer for speech, rising
+// little circles for a thought.
+const TAIL: Record<BubbleKind, { toRight: string; toLeft: string }> = {
+  say: { toRight: '▸', toLeft: '◂' },
+  think: { toRight: '∘°', toLeft: '°∘' },
+}
 
-export type Caption = { badge: string; status: string; said: string | null }
+export type BubbleShape = { lines: readonly string[]; columns: number; rows: number }
+
+// The bubble's size on screen: its wrapped text in a rounded border with a
+// column of padding each side, and its tail.
+export function shapeOf(bubble: Bubble): BubbleShape {
+  const lines = wrapBubble(bubble.text)
+  const widest = Math.max(0, ...lines.map(line => line.length))
+  return { lines, columns: widest + 4 + TAIL[bubble.kind].toRight.length, rows: lines.length + 2 }
+}
+
+// `isPetRight` puts the tail on the right, toward a pet on that side.
+const bubbleBox = ({ Box, Text }: Terminal, bubble: Bubble, isPetRight: boolean) => {
+  const shape = shapeOf(bubble)
+  if (bubble.isFading) {
+    return (
+      <Box flexDirection="column" width={shape.columns} height={shape.rows}>
+        {Array.from({ length: shape.rows }, (_, row) => (
+          <Text key={`blank-${row}`}>{' '.repeat(shape.columns)}</Text>
+        ))}
+      </Box>
+    )
+  }
+
+  const tail = (
+    <Box marginTop={1}>
+      <Text color="claude">{isPetRight ? TAIL[bubble.kind].toRight : TAIL[bubble.kind].toLeft}</Text>
+    </Box>
+  )
+  const isThought = bubble.kind === 'think'
+
+  return (
+    <Box flexDirection="row">
+      {isPetRight ? null : tail}
+      <Box flexDirection="column" borderStyle="round" borderColor="claude" borderDimColor={isThought} paddingX={1}>
+        {shape.lines.map((line, row) => (
+          <Text key={`line-${row}`} italic={isThought} dimColor={isThought}>
+            {line}
+          </Text>
+        ))}
+      </Box>
+      {isPetRight ? tail : null}
+    </Box>
+  )
+}
+
+export type Caption = { badge: string; status: string; said: Bubble | null }
 
 // Right-aligned in the band, the caption on the pet's left facing the screen.
 export const bandFigure = (elements: Terminal, look: Look, caption: Caption, petSize: Size, width: number) => {
@@ -55,7 +101,7 @@ export const bandFigure = (elements: Terminal, look: Look, caption: Caption, pet
   return (
     <Box width={width} flexDirection="row" justifyContent="flex-end" gap={1}>
       <Box flexDirection="column" justifyContent="flex-end" alignItems="flex-end">
-        {caption.said === null || caption.said.trim() === '' ? null : speech(elements, ` ${caption.said} `)}
+        {caption.said === null ? null : bubbleBox(elements, caption.said, true)}
         <Box flexDirection="row" gap={1}>
           <Text color="claude" weight="bold">
             {look.displayName}
@@ -79,7 +125,7 @@ export type RowShare = {
   isHost: boolean
   look: Look
   petSize: Size
-  said: string | null
+  said: Bubble | null
   catcher: Catcher | undefined
   screenColumns: number
 }
@@ -89,12 +135,12 @@ export type RowShare = {
 export function rowWithPet(elements: Terminal, row: RenderElement, share: RowShare) {
   const { Box } = elements
   const { plan, petSize, catcher } = share
-  const said = share.said === null ? '' : ` ${share.said} `
+  const { said } = share
 
   // The bubble goes left of the pet, or right where the screen runs out.
-  const roomLeft = share.screenColumns - plan.at.right - petSize.columns - 1
-  const bubbleRight =
-    roomLeft >= said.length ? plan.at.right + petSize.columns + 1 : Math.max(0, plan.at.right - said.length - 1)
+  const bubbleColumns = said === null ? 0 : shapeOf(said).columns
+  const isLeftOfPet = share.screenColumns - plan.at.right - petSize.columns >= bubbleColumns
+  const bubbleRight = isLeftOfPet ? plan.at.right + petSize.columns : Math.max(0, plan.at.right - bubbleColumns)
 
   return (
     <Box flexDirection="column">
@@ -104,9 +150,9 @@ export function rowWithPet(elements: Terminal, row: RenderElement, share: RowSha
           {picture(elements, share.look, petSize)}
         </Box>
       ) : null}
-      {share.isHost && said !== '' ? (
+      {share.isHost && said !== null ? (
         <Box position="absolute" top={plan.top} right={bubbleRight}>
-          {speech(elements, said)}
+          {bubbleBox(elements, said, isLeftOfPet)}
         </Box>
       ) : null}
       {catcher === undefined ? null : (

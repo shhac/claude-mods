@@ -267,6 +267,9 @@ describe('the pet band', () => {
     await click('left')
     expect(await host.find({ type: 'Image', key: 'pet' })).toBeUndefined()
     expect((await footer.find({ type: 'Image', key: 'pet' }))?.props).toMatchObject({ rows: 6 })
+    // Its top on the prompt box's top edge, the caption moved left of it.
+    const docked = (await footer.findAll({ type: 'Box' })).find(box => box.props.position === 'absolute')
+    expect(docked?.props).toMatchObject({ top: -3, right: 1 })
   })
 
   test('hands the pet to the newest row, and the old host lets it go', async ($, on) => {
@@ -299,25 +302,56 @@ describe('the pet band', () => {
     expect((await floating())?.props).toMatchObject({ top: 10 })
   })
 
-  test('the pet chats: a line for each tool, a remark on each reply', BAND_PLACEMENT, async ($, on) => {
-    codexHome(on)
+  test('the pet says how it feels about the work, not what the work is', BAND_PLACEMENT, async ($, on) => {
+    const { clock } = codexHome(on)
     const asked: string[] = []
+    const answers = ['Ooh, my favourite file 💜', 'Bold of you to rewrite it all 🙃']
     on('model.complete', ($, e) => {
-      asked.push(e.prompt)
+      asked.push(`${e.system ?? ''}\n${e.prompt}`)
       const usage = { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
-      return { value: { isAnswered: true, text: 'Bold of you to rewrite it all 🙃', usage } }
+      return { value: { isAnswered: true, text: answers[asked.length - 1] ?? 'hm', usage } }
     })
+    on('prompt.submit', ($, e) => ({ text: e.text }))
+    await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+    const ui = await $.ui.mount(BAND)
+    const said = async (line: string) => ui.find({ type: 'Text', text: line })
+
+    await $.prompt.submit({ text: 'tidy up the stage maths', wait: false, origin: { kind: 'composer' } })
+    await $.turn.start({ text: 'tidy up the stage maths', turnId: 't1' })
+    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/hooks/stage.ts' })
+    expect(asked.at(-1)).toContain('Your human asked Claude: tidy up the stage maths')
+    expect(asked.at(-1)).toContain('Right now Claude is reading stage.ts')
+    expect(asked.at(-1)).toContain('Never just describe')
+    expect(await said('Ooh, my favourite file 💜')).toBeDefined()
+
+    // Too soon after the last feeling for another.
+    await $.tool.call({ tool: 'Edit', tool_use_id: 'u2', file_path: '/work/hooks/stage.ts', old_string: 'a', new_string: 'b' })
+    expect(asked).toHaveLength(1)
+
+    await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'I rewrote it all.', durationMs: 10, isAborted: false })
+    expect(asked.at(-1)).toContain('I rewrote it all.')
+    // Wrapped to the bubble's width.
+    expect(await said('Bold of you to rewrite it')).toBeDefined()
+    expect(await said('all 🙃')).toBeDefined()
+    expect((await $.command.run(pet('stats'))).text).toContain('watched 1 replies and 2 tool calls')
+    await clock.advance(30000)
+  })
+
+  test('while Claude thinks quietly, the pet muses', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {
+    const { clock } = codexHome(on)
     await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
     const ui = await $.ui.mount(BAND)
 
     await $.turn.start({ text: 'hi', turnId: 't1' })
-    await $.tool.call({ tool: 'Read', tool_use_id: 'u1', file_path: '/work/hooks/stage.ts' })
-    expect(await ui.find({ type: 'Text', text: ' reading stage.ts ' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '∘°' })).toBeUndefined()
 
-    await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'I rewrote it all.', durationMs: 10, isAborted: false })
-    expect(asked.at(-1)).toContain('I rewrote it all.')
-    expect(await ui.find({ type: 'Text', text: ' Bold of you to rewrite it all 🙃 ' })).toBeDefined()
-    expect((await $.command.run(pet('stats'))).text).toContain('watched 1 replies and 1 tool calls')
+    // A thought bubble: its tail rises toward the pet.
+    await clock.advance(6000)
+    expect(await ui.find({ type: 'Text', text: '∘°' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'hmm… 🤔' })).toBeDefined()
+
+    await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'hi', durationMs: 10, isAborted: false })
+    await clock.advance(30000)
   })
 
   test('quiet chatter never asks the model', { options: { placement: 'band', chatter: 'quiet' } }, async ($, on) => {

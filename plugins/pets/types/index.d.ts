@@ -15,6 +15,13 @@ export type SizeName = 'small' | 'medium' | 'large'
 // of the prompt box.
 export type Dock = 'conversation' | 'prompt'
 
+// Said aloud, or only thought (Claude is quiet, the pet's mind wanders).
+export type BubbleKind = 'say' | 'think'
+
+// While it fades, the bubble draws blank in its own shape, so no old text is
+// left where it was.
+export type Bubble = { text: string; kind: BubbleKind; isFading: boolean }
+
 export type Pet = {
   id: string
   displayName: string
@@ -33,8 +40,8 @@ declare module 'claude-code' {
       offset: Offset
       size: SizeName
       dock: Dock
-      // The speech bubble's text, while it shows.
-      bubble: string | null
+      // The bubble, while it shows.
+      bubble: Bubble | null
       // Level and mood hearts, as the caption shows them.
       badge: string
     }

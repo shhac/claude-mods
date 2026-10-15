@@ -14,11 +14,12 @@ import type { GripProps } from './grip'
 import { tend } from './keeper'
 import { animate, playback, react, setActivity } from './player'
 import { forgetRows, noteBottomSlot, noteRow, planFor, screen } from './stage'
-import { narrateTool, remark, voice } from './voice'
+import { awaitThought, feelTool, noteRequest, remark, stopMusing, voice } from './voice'
 import type { Chatter } from './voice'
 
-// The prompt dock can reach this far up the bottom area before it's cut off.
-const PROMPT_DOCK_REACH = 10
+// Docked, the pet's top is on the prompt box's top edge, three rows above the
+// footer caption: the footer's floating boxes reach only over the bottom area.
+const PROMPT_DOCK_TOP = -3
 
 // The validator reads state refs per file, so each file declares the atoms it uses.
 const pet = atom({ plugin: 'pets', key: 'pet' } as const, null)
@@ -94,21 +95,32 @@ export const register: Register = (on, options) => {
   // noted, one of them would keep the pet.
   on('session.end', async ($, e, next) => {
     forgetRows()
+    stopMusing()
+    return next(e)
+  })
+
+  // What the person asked is what the pet's feelings are about.
+  on('prompt.submit', async ($, e, next) => {
+    if (e.command === undefined) noteRequest(e.text)
     return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) await setActivity($, 'running')
+    if (e.agentId !== undefined) return next(e)
+
+    await setActivity($, 'running')
+    awaitThought($)
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
     const isAsking = ASKING_TOOLS.has(e.tool)
     await setActivity($, isAsking ? 'waiting' : activityForTool(e.tool), e.tool)
-    void narrateTool($, e.tool, e)
+    void feelTool($, e.tool, e)
 
     const ran = await next(e)
     const isError = ran.isError === true
+    awaitThought($)
 
     await setActivity($, 'running')
     await tend($, care => afterTool(care, isError))
@@ -125,6 +137,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
 
+    stopMusing()
     await setActivity($, 'ready')
     if (e.reason === 'error' || e.reason === 'refusal') await react($, 'failed')
     if (e.reason !== 'answer') return next(e)
@@ -132,9 +145,7 @@ export const register: Register = (on, options) => {
     await react($, 'celebrating')
     await tend($, afterTurn)
 
-    const current = await read($, pet)
-    if (current !== null) void remark($, current.displayName, e.answer)
-
+    void remark($, e.answer)
     return next(e)
   })
 
@@ -255,11 +266,14 @@ export const register: Register = (on, options) => {
     const petSize = sizeOf(await read($, size))
     const at = await read($, offset)
     const said = await read($, bubble)
+    const isSaying = isDocked && said !== null && !said.isFading
+    // Docked, the caption moves left of the pet; floating, it sits under it.
+    const pad = isDocked ? petSize.columns + 2 : Math.min(at.right, Math.max(0, screen.columns - petSize.columns))
     const grip: GripProps = {
-      pad: isDocked ? 0 : Math.min(at.right, Math.max(0, screen.columns - petSize.columns)),
+      pad,
       name: look.displayName,
       badge: await read($, badge),
-      status: isDocked && said !== null && said.trim() !== '' ? `“${said}”` : await statusLine($),
+      status: isSaying ? `“${said.text}”` : await statusLine($),
     }
 
     if (isDocked) {
@@ -267,8 +281,7 @@ export const register: Register = (on, options) => {
       playback.framesDir = look.framesDir
     }
 
-    const top = -Math.min(PROMPT_DOCK_REACH, Math.max(1, screen.promptRows - 1))
-    return footerWithPet($.ui.resolve(e), await next(e), grip, isDocked ? { top, look, petSize } : undefined)
+    return footerWithPet($.ui.resolve(e), await next(e), grip, isDocked ? { top: PROMPT_DOCK_TOP, look, petSize } : undefined)
   })
 
   // The pet's catcher: a drag moves it, a click pets it, a double click docks

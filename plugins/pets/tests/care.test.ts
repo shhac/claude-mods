@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { afterTool, afterTurn, badgeOf, careFrom, fed, levelOf, milestone, newCare, welcomeBack } from '../hooks/care'
-import { fitBubble, toolLine } from '../hooks/chatter'
+import { feelingAboutTool, fitBubble, toolLine, wrapBubble } from '../hooks/chatter'
 
 const HOUR = 60 * 60 * 1000
 const NOW = Date.UTC(2026, 9, 15, 12)
@@ -53,20 +53,24 @@ describe('looking after the pet', () => {
 })
 
 describe('what the pet says', () => {
-  test('tools that say what they do get a line of their own', () => {
+  test('what Claude is doing, in a few words, for the pet to feel about', () => {
     expect(toolLine('Read', { file_path: '/a/b/register.tsx' })).toBe('reading register.tsx')
     expect(toolLine('Bash', { command: 'ls', description: 'List the hooks folder' })).toBe('list the hooks folder')
+    expect(toolLine('Bash', { command: 'git hunk list' })).toBe('running `git hunk list`')
     expect(toolLine('WebFetch', { url: 'https://example.com/a/b' })).toBe('reading example.com')
-    expect(toolLine('Agent', { description: 'Research overlays' })).toBe('helper: research overlays')
+    expect(toolLine('Agent', { description: 'Research overlays' })).toBe('sending a helper to research overlays')
   })
 
-  test('a bare shell command or an MCP tool needs a summary', () => {
-    expect(toolLine('Bash', { command: 'git hunk list' })).toBeUndefined()
-    expect(toolLine('mcp__linear__search', {})).toBeUndefined()
+  test("the pet's own lines are feelings, and they take turns", () => {
+    expect(feelingAboutTool('Read', 0)).not.toContain('reading')
+    expect(feelingAboutTool('Read', 0)).not.toBe(feelingAboutTool('Read', 1))
+    expect(feelingAboutTool('mcp__linear__search', 0)).toBe('ooh, a new trick')
   })
 
-  test('bubbles are one short line', () => {
+  test('bubbles are one short line, wrapped to fit the bubble', () => {
     expect(fitBubble('  "Nice   refactor,\nClaude"  ')).toBe('Nice refactor, Claude')
-    expect(fitBubble('x'.repeat(60))).toHaveLength(48)
+    expect(fitBubble('x'.repeat(80))).toHaveLength(64)
+    expect(wrapBubble('the gears are turning, slowly but surely ⚙️', 20)).toEqual(['the gears are', 'turning, slowly but', 'surely ⚙️'])
+    expect(wrapBubble('x'.repeat(30), 10)).toEqual(['xxxxxxxxx…'])
   })
 })

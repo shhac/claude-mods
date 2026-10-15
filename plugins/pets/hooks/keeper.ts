@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import { badgeOf, careFrom, levelOf, milestone, welcomeBack } from './care'
 import type { Care } from './care'
 import { react } from './player'
-import { say } from './voice'
+import { noteCare, say } from './voice'
 
 const badge = atom({ plugin: 'pets', key: 'badge' } as const, '')
 
@@ -19,6 +19,7 @@ export async function loadCare($: EngineInterface, petId: string) {
 
   keeper.petId = petId
   keeper.care = care
+  noteCare(care.mood, levelOf(care.xp))
   await $.store.set(storeKey(petId), care)
   await update($, badge, () => badgeOf(care))
   return care
@@ -33,6 +34,7 @@ export async function tend($: EngineInterface, change: (care: Care, now: number)
   const now = await $.clock.now()
   const next = change(care, now)
   keeper.care = next
+  noteCare(next.mood, levelOf(next.xp))
   await $.store.set(storeKey(petId), next)
   await update($, badge, () => badgeOf(next))
 

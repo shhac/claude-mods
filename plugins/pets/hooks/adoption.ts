@@ -7,7 +7,7 @@ import { keeper, loadCare } from './keeper'
 import { codexSelection, findPets, homesFor, prepareFrames } from './pets'
 import type { PetHomes, PetPackage } from './pets'
 import { playback, react } from './player'
-import { say } from './voice'
+import { meetPet, say } from './voice'
 
 // Finding the pet to show, getting it ready and bringing it in.
 
@@ -21,6 +21,7 @@ export async function adopt($: EngineInterface, homes: PetHomes, chosen: PetPack
     const ready = await prepareFrames($, homes, chosen)
     playback.framesDir = ready.framesDir
     await update($, pet, () => ready)
+    meetPet(chosen.displayName, chosen.description)
     await loadCare($, ready.id)
     return undefined
   } catch (error) {
